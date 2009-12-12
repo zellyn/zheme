@@ -1,0 +1,8 @@
+Working though Abdulaziz Ghuloum's Scheme compiler tutorial in Python.
+http://www.cs.indiana.edu/~aghuloum/
+
+Uses lepl for parsing: http://www.acooke.org/lepl/
+
+Zellyn Hunter
+
+Consider this code GPL3 for now. Ask me if you care.
