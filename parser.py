@@ -1,5 +1,10 @@
 from lepl import *
 
+# Parser uses terminology and (more or less) grammar from r5rs to keep
+# things straight. See
+# http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.1
+# (although the PDF version is much easier to read).
+
 # Work around nested Node equality bug in lepl 3.3.3
 # http://code.google.com/p/lepl/issues/detail?id=17
 class NodePlus(Node):
