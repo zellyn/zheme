@@ -167,6 +167,10 @@ TESTS = [
   )),
 ]
 
+# ----------------------------------------------------------------------
+#      Everything below here still needs to be converted to Python
+# ----------------------------------------------------------------------
+
 # (add-tests-with-string-output "fxzero?"
 #    [($fxzero? 0) => "#t\n"]
 #    [($fxzero? 1) => "#f\n"]
