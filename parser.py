@@ -1,9 +1,15 @@
 from lepl import *
 
-class Symbol(Node): pass
-class List(Node): pass
-class DotList(Node): pass
-class Char(Node): pass
+# Work around nested Node equality bug in lepl 3.3.3
+# http://code.google.com/p/lepl/issues/detail?id=17
+class NodePlus(Node):
+    def __ne__(self, other):
+        return not (self==other)
+
+class Symbol(NodePlus): pass
+class List(NodePlus): pass
+class DotList(NodePlus): pass
+class Char(NodePlus): pass
 
 def float_or_int(s):
     if '.' in s:
@@ -14,9 +20,22 @@ def float_or_int(s):
 def to_bool(s):
     return s == '#t'
 
+def make_char(s):
+    SPECIALS = {
+        'space': ' ',
+        'newline': '\n',
+        'return': '\r',
+        'tab': '\t',
+        }
+
+    print "[%s]" % s
+    if len(s) == 3:
+        return Char(s[2])
+    return Char(SPECIALS.get(s[2:]))
+
+
 s_character = Or(Literal('#\\newline'), Literal('#\\tab'), Literal('#\\space'),
-                 Literal('#\\return'), DfaRegexp('#\\\\[^ \r\n\t\f\v]')) > Char
-s_character = Literal('#\\newline')
+                 Literal('#\\return'), DfaRegexp('#\\\\[^ \r\n\t\f\v]')) >> make_char
 s_boolean = (Literal('#f') | Literal('#t')) >> to_bool
 s_string = String()
 s_number = Float() >> float_or_int
