@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!bin/python
 def compile_program(x):
     emit_function_header("scheme_entry")
     print "    movl $%d, %%eax" % x
