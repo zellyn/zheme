@@ -182,59 +182,60 @@ TESTS = [
   ("(null? -10)", L(S("null?"), -10), "#f"),
   ("(null? 10)", L(S("null?"), 10), "#f"),
   )),
+
+("boolean?",
+ (("(boolean? #t)", L(S("boolean?"), True), "#t"),
+  ("(boolean? #f)", L(S("boolean?"), False), "#t"),
+  ("(boolean? 0)", L(S("boolean?"), 0), "#f"),
+  ("(boolean? 1)", L(S("boolean?"), 1), "#f"),
+  ("(boolean? -1)", L(S("boolean?"), -1), "#f"),
+  ("(boolean? ())", L(S("boolean?"), L()), "#f"),
+  ("(boolean? #\\a)", L(S("boolean?"), C("a")), "#f"),
+  ("(boolean? (boolean? 0))", L(S("boolean?"), L(S("boolean?"), 0)), "#t"),
+  ("(boolean? (fixnum? (boolean? 0)))", L(S("boolean?"), L(S("fixnum?"), L(S("boolean?"), 0))), "#t"),
+  )),
+
+("char?",
+ (("(char? #\\a)", L(S("char?"), C("a")), "#t"),
+  ("(char? #\\Z)", L(S("char?"), C("Z")), "#t"),
+  ("(char? #\\newline)", L(S("char?"), C("\n")), "#t"),
+  ("(char? #t)", L(S("char?"), True), "#f"),
+  ("(char? #f)", L(S("char?"), False), "#f"),
+  ("(char? ())", L(S("char?"), L()), "#f"),
+  ("(char? (char? #t))", L(S("char?"), L(S("char?"), True)), "#f"),
+  ("(char? 0)", L(S("char?"), 0), "#f"),
+  ("(char? 23870)", L(S("char?"), 23870), "#f"),
+  ("(char? -23789)", L(S("char?"), -23789), "#f"),
+  )),
+
+("not",
+ (("(not #t)", L(S("not"), True), "#f"),
+  ("(not #f)", L(S("not"), False), "#t"),
+  ("(not 15)", L(S("not"), 15), "#f"),
+  ("(not ())", L(S("not"), L()), "#f"),
+  ("(not #\\A)", L(S("not"), C("A")), "#f"),
+  ("(not (not #t))", L(S("not"), L(S("not"), True)), "#t"),
+  ("(not (not #f))", L(S("not"), L(S("not"), False)), "#f"),
+  ("(not (not 15))", L(S("not"), L(S("not"), 15)), "#t"),
+  ("(not (fixnum? 15))", L(S("not"), L(S("fixnum?"), 15)), "#f"),
+  ("(not (fixnum? #f))", L(S("not"), L(S("fixnum?"), False)), "#t"),
+  )),
+
+("fxlognot",
+ (
+  ("($fxlognot 0)", L(S("$fxlognot"), 0), "-1"),
+  ("($fxlognot -1)", L(S("$fxlognot"), -1), "0"),
+  ("($fxlognot 1)", L(S("$fxlognot"), 1), "-2"),
+  ("($fxlognot -2)", L(S("$fxlognot"), -2), "1"),
+  ("($fxlognot 536870911)", L(S("$fxlognot"), 536870911), "-536870912"),
+  ("($fxlognot -536870912)", L(S("$fxlognot"), -536870912), "536870911"),
+  ("($fxlognot ($fxlognot 237463))", L(S("$fxlognot"), L(S("$fxlognot"), 237463)), "237463"),
+  )),
 ]
 
 # ----------------------------------------------------------------------
 #      Everything below here still needs to be converted to Python
 # ----------------------------------------------------------------------
-
-# (add-tests-with-string-output "boolean?"
-#    [(boolean? #t) => "#t\n"]
-#    [(boolean? #f) => "#t\n"]
-#    [(boolean? 0) => "#f\n"]
-#    [(boolean? 1) => "#f\n"]
-#    [(boolean? -1) => "#f\n"]
-#    [(boolean? ()) => "#f\n"]
-#    [(boolean? #\a) => "#f\n"]
-#    [(boolean? (boolean? 0)) => "#t\n"]
-#    [(boolean? (fixnum? (boolean? 0))) => "#t\n"]
-# )
-
-# (add-tests-with-string-output "char?"
-#    [(char? #\a) => "#t\n"]
-#    [(char? #\Z) => "#t\n"]
-#    [(char? #\newline) => "#t\n"]
-#    [(char? #t) => "#f\n"]
-#    [(char? #f) => "#f\n"]
-#    [(char? ()) => "#f\n"]
-#    [(char? (char? #t)) => "#f\n"]
-#    [(char? 0) => "#f\n"]
-#    [(char? 23870) => "#f\n"]
-#    [(char? -23789) => "#f\n"]
-# )
-
-# (add-tests-with-string-output "not"
-#   [(not #t) => "#f\n"]
-#   [(not #f) => "#t\n"]
-#   [(not 15) => "#f\n"]
-#   [(not ()) => "#f\n"]
-#   [(not #\A) => "#f\n"]
-#   [(not (not #t)) => "#t\n"]
-#   [(not (not #f)) => "#f\n"]
-#   [(not (not 15)) => "#t\n"]
-#   [(not (fixnum? 15)) => "#f\n"]
-#   [(not (fixnum? #f)) => "#t\n"]
-# )
-
-# (add-tests-with-string-output "fxlognot"
-#  [($fxlognot 0) => "-1\n"]
-#  [($fxlognot -1) => "0\n"]
-#  [($fxlognot 1) => "-2\n"]
-#  [($fxlognot -2) => "1\n"]
-#  [($fxlognot 536870911) => "-536870912\n"]
-#  [($fxlognot -536870912) => "536870911\n"]
-#  [($fxlognot ($fxlognot 237463)) => "237463\n"]
-# )
 
 # (add-tests-with-string-output "and"
 #   [(and) => "#t\n"]
@@ -2134,6 +2135,5 @@ from parser import parse
 for (category, tests) in TESTS:
     print category
     for text, parse_e, result_e in tests:
-        print "  %s" % text
         parse_a = parse(text)
-        assert parse_a == parse_e, "%s != %s" % (parse_a, parse_e)
+        assert parse_a == parse_e, "[%s]: %s != %s" % (text, parse_a, parse_e)
