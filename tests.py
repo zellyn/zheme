@@ -231,24 +231,24 @@ TESTS = [
   ("($fxlognot -536870912)", L(S("$fxlognot"), -536870912), "536870911"),
   ("($fxlognot ($fxlognot 237463))", L(S("$fxlognot"), L(S("$fxlognot"), 237463)), "237463"),
   )),
+
+("and",
+ (("(and)", L(S("and")), "#t"),
+  ("(and #t)", L(S("and"), True), "#t"),
+  ("(and #f)", L(S("and"), False), "#f"),
+  ("(and #t #t #t)", L(S("and"), True, True, True), "#t"),
+  ("(and #t #t #f)", L(S("and"), True, True, False), "#f"),
+  ("(and #t #f #t)", L(S("and"), True, False, True), "#f"),
+  ("(and (not (char? 1)) (not (boolean? 2)) (not (not (boolean? #t))))", L(S("and"), L(S("not"), L(S("char?"), 1)), L(S("not"), L(S("boolean?"), 2)), L(S("not"), L(S("not"), L(S("boolean?"), True)))), "#t"),
+  ("(and (not (char? #\\a)) (not (boolean? 2)) (not (not (boolean? #t))))", L(S("and"), L(S("not"), L(S("char?"), C("a"))), L(S("not"), L(S("boolean?"), 2)), L(S("not"), L(S("not"), L(S("boolean?"), True)))), "#f"),
+  ("(and (not (char? 1)) (not (boolean? #t)) (not (not (boolean? #t))))", L(S("and"), L(S("not"), L(S("char?"), 1)), L(S("not"), L(S("boolean?"), True)), L(S("not"), L(S("not"), L(S("boolean?"), True)))), "#f"),
+  ("(and (not (char? 1)) (not (boolean? 2)) (not (not (boolean? 2))))", L(S("and"), L(S("not"), L(S("char?"), 1)), L(S("not"), L(S("boolean?"), 2)), L(S("not"), L(S("not"), L(S("boolean?"), 2)))), "#f"),
+  )),
 ]
 
 # ----------------------------------------------------------------------
 #      Everything below here still needs to be converted to Python
 # ----------------------------------------------------------------------
-
-# (add-tests-with-string-output "and"
-#   [(and) => "#t\n"]
-#   [(and #t) => "#t\n"]
-#   [(and #f) => "#f\n"]
-#   [(and #t #t #t) => "#t\n"]
-#   [(and #t #t #f) => "#f\n"]
-#   [(and #t #f #t) => "#f\n"]
-#   [(and (not (char? 1)) (not (boolean? 2)) (not (not (boolean? #t)))) => "#t\n"]
-#   [(and (not (char? #\a)) (not (boolean? 2)) (not (not (boolean? #t)))) => "#f\n"]
-#   [(and (not (char? 1)) (not (boolean? #t)) (not (not (boolean? #t)))) => "#f\n"]
-#   [(and (not (char? 1)) (not (boolean? 2)) (not (not (boolean? 2)))) => "#f\n"]
-# )
 
 # (add-tests-with-string-output "if"
 #   [(if #t 12 13) => "12\n"]
@@ -2132,7 +2132,7 @@ TESTS = [
 
 from parser import parse
 
-for (category, tests) in TESTS:
+for (category, tests) in TESTS[9:]:
     print category
     for text, parse_e, result_e in tests:
         parse_a = parse(text)
