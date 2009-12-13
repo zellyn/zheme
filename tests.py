@@ -165,28 +165,28 @@ TESTS = [
   ("(fixnum? ($char->fixnum #\\r))", L(S("fixnum?"), L(S("$char->fixnum"), C("r"))), "#t"),
   ("(fixnum? ($fixnum->char 12))", L(S("fixnum?"), L(S("$fixnum->char"), 12)), "#f"),
   )),
+
+("fxzero?",
+ (("($fxzero? 0)", L(S("$fxzero?"), 0), "#t"),
+  ("($fxzero? 1)", L(S("$fxzero?"), 1), "#f"),
+  ("($fxzero? -1)", L(S("$fxzero?"), -1), "#f"),
+  )),
+
+("null?",
+ (("(null? ())", L(S("null?"), L()), "#t"),
+  ("(null? #f)", L(S("null?"), False), "#f"),
+  ("(null? #t)", L(S("null?"), True), "#f"),
+  ("(null? (null? ()))", L(S("null?"), L(S("null?"), L())), "#f"),
+  ("(null? #\\a)", L(S("null?"), C("a")), "#f"),
+  ("(null? 0)", L(S("null?"), 0), "#f"),
+  ("(null? -10)", L(S("null?"), -10), "#f"),
+  ("(null? 10)", L(S("null?"), 10), "#f"),
+  )),
 ]
 
 # ----------------------------------------------------------------------
 #      Everything below here still needs to be converted to Python
 # ----------------------------------------------------------------------
-
-# (add-tests-with-string-output "fxzero?"
-#    [($fxzero? 0) => "#t\n"]
-#    [($fxzero? 1) => "#f\n"]
-#    [($fxzero? -1) => "#f\n"]
-# )
-
-# (add-tests-with-string-output "null?"
-#    [(null? ()) => "#t\n"]
-#    [(null? #f) => "#f\n"]
-#    [(null? #t) => "#f\n"]
-#    [(null? (null? ())) => "#f\n"]
-#    [(null? #\a) => "#f\n"]
-#    [(null? 0) => "#f\n"]
-#    [(null? -10) => "#f\n"]
-#    [(null? 10) => "#f\n"]
-# )
 
 # (add-tests-with-string-output "boolean?"
 #    [(boolean? #t) => "#t\n"]
