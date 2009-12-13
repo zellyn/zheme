@@ -33,7 +33,6 @@ def make_char(s):
         'tab': '\t',
         }
 
-    print "[%s]" % s
     if len(s) == 3:
         return Char(s[2])
     return Char(SPECIALS.get(s[2:]))
