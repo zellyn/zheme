@@ -1,8 +1,7 @@
 * Scheme compiler
-
 Using the paper-like version (p), with clarification from the book-like version (b).
 
-** Notes
+** Step 0
 *** Implement test.c: scheme_entry() (3.1)
 	.text
 	.align 4,0x90
