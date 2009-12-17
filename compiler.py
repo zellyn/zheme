@@ -4,14 +4,33 @@ import subprocess
 from parser import Symbol, List, Char
 
 EMPTY_LIST = 0b00101111 # 47 == 0x2f
+
 FIXNUM_SHIFT = 2
-FIXNUM_MASK = 0b11
-FIXNUM_TAG  = 0b00
+FIXNUM_MASK  = 0b11
+FIXNUM_TAG   = 0b00
+
+CHAR_SHIFT = 8
+CHAR_MASK  = 0b11111111
+CHAR_TAG   = 0b00001111
+
+BOOL_SHIFT = 7
+BOOL_MASK  = 0b1111111
+BOOL_TAG   = 0b0011111
+
 
 def compile_program(x, text, f):
+    # print "Compiling: %s" % x
     emit_function_header("scheme_entry", f)
-    if isinstance(x, int):
-        x <<= FIXNUM_SHIFT
+    if isinstance(x, bool):
+        x = (x << BOOL_SHIFT) | BOOL_TAG
+    elif isinstance(x, int):
+        x = (x << FIXNUM_SHIFT) | FIXNUM_TAG
+    elif isinstance(x, Char):
+        x = (ord(x[0]) << CHAR_SHIFT) | CHAR_TAG
+    elif (List()==x):
+        x = EMPTY_LIST
+    else:
+        raise Exception("Unknown value from [%s]: %s" % (text, x))
     print >>f, "    movl $%d, %%eax" % x
     print >>f, "    ret"
 

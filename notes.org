@@ -1,7 +1,7 @@
 * Scheme compiler
 Using the paper-like version (p), with clarification from the book-like version (b).
 
-** Step 0
+** Step 0 - basics
 *** Implement test.c: scheme_entry() (3.1)
 	.text
 	.align 4,0x90
@@ -34,3 +34,12 @@ $ ./compiler.py > ctest.s
 $ gcc -o stst runtime.c ctest.s
 $ ./stst
 42
+** Step 1 - Integers (3.1)
+Used (p) only.
+No issues. Wrote simple gcc wrapper based directly off the scheme example.
+Actually wrote the integer part of 3.2 by mistake.
+** Step 2 - Immediate Constants (3.2)
+Used (p) only.
+isinstance(False, int) is True, so check for bools before ints.
+Case in runtime.c to print char values for space, newline, tab, return.
+** Step 3 - Unary Primitives (3.3)
