@@ -16,22 +16,64 @@ CHAR_TAG   = 0b00001111
 BOOL_SHIFT = 7
 BOOL_MASK  = 0b1111111
 BOOL_TAG   = 0b0011111
+BOOL_TRUE  = (1<<BOOL_SHIFT) | BOOL_TAG
+BOOL_FALSE = (0<<BOOL_SHIFT) | BOOL_TAG
 
+def immediate_p(x):
+    return isinstance(x, (int, Char)) or (List()==x)
+
+def immediate_rep(x):
+    if isinstance(x, bool):
+        return (x << BOOL_SHIFT) | BOOL_TAG
+    elif isinstance(x, int):
+        return (x << FIXNUM_SHIFT) | FIXNUM_TAG
+    elif isinstance(x, Char):
+        return (ord(x[0]) << CHAR_SHIFT) | CHAR_TAG
+    elif (List()==x):
+        return EMPTY_LIST
+    else:
+        raise Exception("Unknown immediate value: %s" % (x,))
+
+def primcall_p(x):
+    if not isinstance(x, List): return False
+    if not isinstance(x[0], Symbol): return False
+    return  x[0][0] in ['$fxadd1', '$fixnum->char', '$char->fixnum', 'fixnum?']
+
+def emit_primcall(x, f):
+    s = x[0][0]
+    if s == '$fxadd1':
+        emit_expr(x[1], f)
+        print >>f, "    addl $%d, %%eax" % immediate_rep(1)
+    elif s == '$fixnum->char':
+        emit_expr(x[1], f)
+        print >>f, "    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT)
+        print >>f, "    orl $%d, %%eax" % CHAR_TAG
+    elif s == '$char->fixnum':
+        emit_expr(x[1], f)
+        print >>f, "    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT)
+    elif s == 'fixnum?':
+        emit_expr(x[1], f)
+        print >>f, "    and $%d, %%al" % (FIXNUM_MASK)
+        print >>f, "    cmp $%d, %%al" % (FIXNUM_TAG)
+        print >>f, "    sete %al"
+        print >>f, "    movzbl %al, %eax"
+        print >>f, "    sal $%d, %%al" % (BOOL_SHIFT)
+        print >>f, "    or $%d, %%al" % (BOOL_TAG)
+    else:
+        raise Exception("Unknown primcall: %s" % s)
+
+def emit_expr(x, f):
+    if immediate_p(x):
+        print >>f, "    movl $%d, %%eax" % immediate_rep(x)
+    elif primcall_p(x):
+        emit_primcall(x, f)
+    else:
+        raise Exception("Unknown value: %s" % (x,))
 
 def compile_program(x, text, f):
     # print "Compiling: %s" % x
     emit_function_header("scheme_entry", f)
-    if isinstance(x, bool):
-        x = (x << BOOL_SHIFT) | BOOL_TAG
-    elif isinstance(x, int):
-        x = (x << FIXNUM_SHIFT) | FIXNUM_TAG
-    elif isinstance(x, Char):
-        x = (ord(x[0]) << CHAR_SHIFT) | CHAR_TAG
-    elif (List()==x):
-        x = EMPTY_LIST
-    else:
-        raise Exception("Unknown value from [%s]: %s" % (text, x))
-    print >>f, "    movl $%d, %%eax" % x
+    emit_expr(x, f)
     print >>f, "    ret"
 
 def emit_function_header(function_name, f):
