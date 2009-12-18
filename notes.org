@@ -44,4 +44,10 @@ isinstance(False, int) is True, so check for bools before ints.
 Case in runtime.c to print char values for space, newline, tab, return.
 ** Step 3 - Unary Primitives (3.3)
 Started with (p). Shifted to (b) for fixnum?
-
+Mostly worked with (b).
+** Step 4 - And
+Not really in docs, just in tests. Needs labels, but no stack.
+** Step 5 - If
+Implemented 'if'. Sort-of from (b), but easy after 'and'
+$fxsub1 needed for 'and' tests.
+Implemented 'or' just for kicks.

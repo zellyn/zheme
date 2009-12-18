@@ -1,5 +1,6 @@
 #!bin/python
 
+import itertools
 import subprocess
 from parser import Symbol, List, Char
 
@@ -19,6 +20,10 @@ BOOL_TAG   = 0b0011111
 BOOL_TRUE  = (1<<BOOL_SHIFT) | BOOL_TAG
 BOOL_FALSE = (0<<BOOL_SHIFT) | BOOL_TAG
 
+__labels = itertools.count()
+def get_label():
+    return "L_%d" % __labels.next()
+
 def immediate_p(x):
     return isinstance(x, (int, Char)) or (List()==x)
 
@@ -34,17 +39,30 @@ def immediate_rep(x):
     else:
         raise Exception("Unknown immediate value: %s" % (x,))
 
+def func_p(x, names):
+    return isinstance(x, List) and isinstance(x[0], Symbol) and x[0][0] in names
+
 def primcall_p(x):
-    if not isinstance(x, List): return False
-    if not isinstance(x[0], Symbol): return False
-    return  x[0][0] in ['$fxadd1', '$fixnum->char', '$char->fixnum', 'fixnum?', '$fxzero?',
-                        'null?', 'boolean?', 'char?', 'not', '$fxlognot']
+    return func_p(x,  ['$fxadd1', '$fxsub1', '$fixnum->char', '$char->fixnum', 'fixnum?',
+                       '$fxzero?', 'null?', 'boolean?', 'char?', 'not', '$fxlognot'])
+
+def and_p(x):
+    return func_p(x, ['and'])
+
+def or_p(x):
+    return func_p(x, ['or'])
+
+def if_p(x):
+    return func_p(x, ['if'])
 
 def emit_primcall(x, f):
     s = x[0][0]
     if s == '$fxadd1':
         emit_expr(x[1], f)
         print >>f, "    addl $%d, %%eax" % immediate_rep(1)
+    elif s == '$fxsub1':
+        emit_expr(x[1], f)
+        print >>f, "    subl $%d, %%eax" % immediate_rep(1)
     elif s == '$fixnum->char':
         emit_expr(x[1], f)
         print >>f, "    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT)
@@ -103,11 +121,53 @@ def emit_primcall(x, f):
     else:
         raise Exception("Unknown primcall: %s" % s)
 
+def emit_and(exprs, f):
+    if not exprs:
+        emit_expr(True, f)
+        return
+    over_label = get_label()
+    for expr in exprs[:-1]:
+        emit_expr(expr, f)
+        print >>f, "    cmpl $%d, %%eax" % BOOL_FALSE
+        print >>f, "    je %s" % over_label
+    emit_expr(exprs[-1], f)
+    print >>f, "%s:" % over_label
+
+def emit_or(exprs, f):
+    if not exprs:
+        emit_expr(False, f)
+        return
+    over_label = get_label()
+    for expr in exprs[:-1]:
+        emit_expr(expr, f)
+        print >>f, "    cmpl $%d, %%eax" % BOOL_TRUE
+        print >>f, "    je %s" % over_label
+    emit_expr(exprs[-1], f)
+    print >>f, "%s:" % over_label
+
+def emit_if(exprs, f):
+    false_label = get_label()
+    over_label = get_label()
+    emit_expr(exprs[0], f)
+    print >>f, "    cmpl $%d, %%eax" % BOOL_FALSE
+    print >>f, "    je %s" % false_label
+    emit_expr(exprs[1], f)
+    print >>f, "jmp %s" % over_label
+    print >>f, "%s:" % false_label
+    emit_expr(exprs[2], f)
+    print >>f, "%s:" % over_label
+
 def emit_expr(x, f):
     if immediate_p(x):
         print >>f, "    movl $%d, %%eax" % immediate_rep(x)
     elif primcall_p(x):
         emit_primcall(x, f)
+    elif and_p(x):
+        emit_and(x[1:], f)
+    elif or_p(x):
+        emit_or(x[1:], f)
+    elif if_p(x):
+        emit_if(x[1:], f)
     else:
         raise Exception("Unknown value: %s" % (x,))
 
