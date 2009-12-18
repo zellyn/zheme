@@ -37,7 +37,8 @@ def immediate_rep(x):
 def primcall_p(x):
     if not isinstance(x, List): return False
     if not isinstance(x[0], Symbol): return False
-    return  x[0][0] in ['$fxadd1', '$fixnum->char', '$char->fixnum', 'fixnum?']
+    return  x[0][0] in ['$fxadd1', '$fixnum->char', '$char->fixnum', 'fixnum?', '$fxzero?',
+                        'null?', 'boolean?', 'char?', 'not', '$fxlognot']
 
 def emit_primcall(x, f):
     s = x[0][0]
@@ -53,12 +54,52 @@ def emit_primcall(x, f):
         print >>f, "    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT)
     elif s == 'fixnum?':
         emit_expr(x[1], f)
-        print >>f, "    and $%d, %%al" % (FIXNUM_MASK)
-        print >>f, "    cmp $%d, %%al" % (FIXNUM_TAG)
+        print >>f, "    and $%d, %%al" % FIXNUM_MASK
+        print >>f, "    cmp $%d, %%al" % FIXNUM_TAG
         print >>f, "    sete %al"
         print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % (BOOL_SHIFT)
-        print >>f, "    or $%d, %%al" % (BOOL_TAG)
+        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
+        print >>f, "    or $%d, %%al" % BOOL_TAG
+    elif s == 'boolean?':
+        emit_expr(x[1], f)
+        print >>f, "    and $%d, %%al" % BOOL_MASK
+        print >>f, "    cmp $%d, %%al" % BOOL_TAG
+        print >>f, "    sete %al"
+        print >>f, "    movzbl %al, %eax"
+        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
+        print >>f, "    or $%d, %%al" % BOOL_TAG
+    elif s == 'char?':
+        emit_expr(x[1], f)
+        print >>f, "    and $%d, %%al" % CHAR_MASK
+        print >>f, "    cmp $%d, %%al" % CHAR_TAG
+        print >>f, "    sete %al"
+        print >>f, "    movzbl %al, %eax"
+        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
+        print >>f, "    or $%d, %%al" % BOOL_TAG
+    elif s == '$fxzero?':
+        emit_expr(x[1], f)
+        print >>f, "    cmpl $0, %eax"
+        print >>f, "    sete %al"
+        print >>f, "    movzbl %al, %eax"
+        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
+        print >>f, "    or $%d, %%al" % BOOL_TAG
+    elif s == 'null?':
+        emit_expr(x[1], f)
+        print >>f, "    cmpl $%d, %%eax" % EMPTY_LIST
+        print >>f, "    sete %al"
+        print >>f, "    movzbl %al, %eax"
+        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
+        print >>f, "    or $%d, %%al" % BOOL_TAG
+    elif s == 'not':
+        emit_expr(x[1], f)
+        print >>f, "    cmpl $%d, %%eax" % BOOL_FALSE
+        print >>f, "    sete %al"
+        print >>f, "    movzbl %al, %eax"
+        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
+        print >>f, "    or $%d, %%al" % BOOL_TAG
+    elif s == '$fxlognot':
+        emit_expr(x[1], f)
+        print >>f, "    xorl $%d, %%eax" % 0xfffffffc
     else:
         raise Exception("Unknown primcall: %s" % s)
 

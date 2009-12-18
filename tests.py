@@ -2133,7 +2133,7 @@ TESTS = [
 from parser import parse
 
 # Test parsing
-for (category, tests) in TESTS[4:]:
+for (category, tests) in TESTS:
     print category
     for text, parse_e, result_e in tests:
         parse_a = parse(text)
