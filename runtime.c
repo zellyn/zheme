@@ -25,15 +25,15 @@ static char* allocate_protected_space(int size) {
                    MAP_ANON | MAP_PRIVATE,
                    0, 0);
     if (p == MAP_FAILED) {
-        printf("*** Error allocating ***\n");
+        printf("*** Error allocating ***\n"); // do something more sensible
     }
     status = mprotect(p, page, PROT_NONE);
     if (status != 0) {
-        printf("*** Error protecting first page ***\n");
+        printf("*** Error protecting first page ***\n"); // do something more sensible
     }
     status = mprotect(p + page + aligned_size, page, PROT_NONE);
     if (status != 0) {
-        printf("*** Error protecting last page ***\n");
+        printf("*** Error protecting last page ***\n"); // do something more sensible
     }
     return (p + page);
 }
@@ -44,15 +44,11 @@ static void deallocate_protected_space(char* p, int size) {
     int aligned_size = ((size + page - 1) / page) * page;
     status = munmap(p - page, aligned_size + 2 * page);
     if (status != 0) {
-        printf("*** Error deallocating ***\n");
+        printf("*** Error deallocating ***\n"); // do something more sensible
     }
 }
 
-int main(int argc, char** argv) {
-    int stack_size = (16 * 4096);  /* holds 16K cells */
-    char* stack_top = allocate_protected_space(stack_size);
-    char* stack_base = stack_top + stack_size;
-    int val = scheme_entry(stack_base);
+void print_val(int val) {
     if ((val & FIXNUM_MASK) == FIXNUM_TAG) {
         printf("%d\n", val >> FIXNUM_SHIFT);
     }
@@ -77,6 +73,16 @@ int main(int argc, char** argv) {
     else if (val == EMPTY_LIST) {
         printf("()\n");
     }
+}
+
+int main(int argc, char** argv) {
+    int stack_size = (16 * 4096);  /* holds 16K cells */
+    char* stack_top = allocate_protected_space(stack_size);
+    char* stack_base = stack_top + stack_size;
+
+    int val = scheme_entry(stack_base);
+    print_val(val);
+
     deallocate_protected_space(stack_top, stack_size);
     return 0;
 }
