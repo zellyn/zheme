@@ -119,7 +119,7 @@ TESTS = [
   ("#\\~", C("~"), "#\\~"),
   )),
 
-("fxadd1",
+("$fxadd1",
  (("($fxadd1 0)", L(S("$fxadd1"), 0), "1"),
   ("($fxadd1 -1)", L(S("$fxadd1"), -1), "0"),
   ("($fxadd1 1)", L(S("$fxadd1"), 1), "2"),
@@ -131,7 +131,7 @@ TESTS = [
   ("($fxadd1 ($fxadd1 ($fxadd1 ($fxadd1 ($fxadd1 ($fxadd1 12))))))", L(S("$fxadd1"), L(S("$fxadd1"), L(S("$fxadd1"), L(S("$fxadd1"), L(S("$fxadd1"), L(S("$fxadd1"), 12)))))), "18"),
   )),
 
-("fixnum->char and char->fixnum",
+("$fixnum->char and $char->fixnum",
  (("($fixnum->char 65)", L(S("$fixnum->char"), 65), "#\\A"),
   ("($fixnum->char 97)", L(S("$fixnum->char"), 97), "#\\a"),
   ("($fixnum->char 122)", L(S("$fixnum->char"), 122), "#\\z"),
@@ -167,7 +167,7 @@ TESTS = [
   ("(fixnum? ($fixnum->char 12))", L(S("fixnum?"), L(S("$fixnum->char"), 12)), "#f"),
   )),
 
-("fxzero?",
+("$fxzero?",
  (("($fxzero? 0)", L(S("$fxzero?"), 0), "#t"),
   ("($fxzero? 1)", L(S("$fxzero?"), 1), "#f"),
   ("($fxzero? -1)", L(S("$fxzero?"), -1), "#f"),
@@ -222,7 +222,7 @@ TESTS = [
   ("(not (fixnum? #f))", L(S("not"), L(S("fixnum?"), False)), "#t"),
   )),
 
-("fxlognot",
+("$fxlognot",
  (
   ("($fxlognot 0)", L(S("$fxlognot"), 0), "-1"),
   ("($fxlognot -1)", L(S("$fxlognot"), -1), "0"),
