@@ -2,6 +2,8 @@ import itertools
 import subprocess
 from parser import Symbol, List, Char
 
+FULL_WORD = 0xffffffff
+
 EMPTY_LIST = 0b00101111 # 47 == 0x2f
 
 FIXNUM_SHIFT = 2
@@ -75,6 +77,81 @@ def emit_fx_plus(x, si, f):
     emit_expr(x[2], si - WORD_SIZE, f)
     emit(f, "    addl %d(%%esp), %%eax" % si)
 
+@op('fx-', 2)
+def emit_fx_minus(x, si, f):
+    emit_expr(x[2], si, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[1], si - WORD_SIZE, f)
+    emit(f, "    subl %d(%%esp), %%eax" % si)
+
+@op('fx*', 2)
+def emit_fx_mul(x, si, f):
+    emit_expr(x[1], si, f)
+    emit(f, "    sarl $%d, %%eax" % FIXNUM_SHIFT)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[2], si - WORD_SIZE, f)
+    emit(f, "    imull %d(%%esp), %%eax" % si)
+
+@op('fxlogor', 2)
+def emit_fx_logor(x, si, f):
+    emit_expr(x[1], si, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[2], si - WORD_SIZE, f)
+    emit(f, "    orl %d(%%esp), %%eax" % si)
+
+@op('fxlognot', 1)
+def emit_fx_lognot(x, si, f):
+    emit_expr(x[1], si, f)
+    emit(f, "    xorl $%d, %%eax" % (FULL_WORD-FIXNUM_MASK))
+
+@op('fxlogand', 2)
+def emit_fx_logand(x, si, f):
+    emit_expr(x[1], si, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[2], si - WORD_SIZE, f)
+    emit(f, "    andl %d(%%esp), %%eax" % si)
+
+@op('fx=', 2)
+def emit_fx_eq(x, si, f):
+    emit_expr(x[1], si, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[2], si - WORD_SIZE, f)
+    emit(f, "    cmpl %d(%%esp), %%eax" % si)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
+
+@op('fx<', 2)
+def emit_fx_lt(x, si, f):
+    emit_expr(x[2], si, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[1], si - WORD_SIZE, f)
+    emit(f, "    subl %d(%%esp), %%eax" % si)
+    emit(f, "    sets %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
+
+@op('fx<=', 2)
+def emit_fx_lte(x, si, f):
+    emit_expr(x[1], si, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[2], si - WORD_SIZE, f)
+    emit(f, "    subl %d(%%esp), %%eax" % si)
+    emit(f, "    setns %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
+
+@op('fx>', 2)
+def emit_fx_gt(x, si, f):
+    emit_fx_lt(List(x[0],x[2],x[1]), si, f)
+
+@op('fx>=', 2)
+def emit_fx_gte(x, si, f):
+    emit_fx_lte(List(x[0],x[2],x[1]), si, f)
+
 @op('$fxadd1', 1)
 def emit_fxadd1(x, si, f):
     emit_expr(x[1], si, f)
@@ -88,7 +165,7 @@ def emit_fxsub1(x, si, f):
 @op('$fixnum->char', 1)
 def emit_fixnum_char(x, si, f):
     emit_expr(x[1], si, f)
-    emit(f, "    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT))
+    emit(f, "    shll $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT))
     emit(f, "    orl $%d, %%eax" % CHAR_TAG)
 
 @op('$char->fixnum', 1)
@@ -103,7 +180,7 @@ def emit_fixnum_p(x, si, f):
     emit(f, "    cmp $%d, %%al" % FIXNUM_TAG)
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
-    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('boolean?', 1)
@@ -113,7 +190,7 @@ def emit_boolean_p(x, si, f):
     emit(f, "    cmp $%d, %%al" % BOOL_TAG)
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
-    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('char?', 1)
@@ -123,7 +200,7 @@ def emit_char_p(x, si, f):
     emit(f, "    cmp $%d, %%al" % CHAR_TAG)
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
-    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('$fxzero?', 1)
@@ -132,7 +209,7 @@ def emit_fxzero_p(x, si, f):
     emit(f, "    cmpl $0, %eax")
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
-    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('null?', 1)
@@ -141,7 +218,7 @@ def emit_null_p(x, si, f):
     emit(f, "    cmpl $%d, %%eax" % EMPTY_LIST)
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
-    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('not', 1)
@@ -150,7 +227,7 @@ def emit_not(x, si, f):
     emit(f, "    cmpl $%d, %%eax" % BOOL_FALSE)
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
-    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('$fxlognot', 1)

@@ -56,3 +56,5 @@ Implemented 'or' just for kicks.
 - needed #include <sys/mman.h>
 - s/MAP_ANONYMOUS/MAP_ANON/
 *** Modified compiler.py to pass stack index around
+** Step 7 - other binaries
+[[http://webster.cs.ucr.edu/AoA/DOS/ch06/CH06-4.html#HEADING4-74][SETcc flag tests docs]]
