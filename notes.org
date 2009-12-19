@@ -58,3 +58,7 @@ Implemented 'or' just for kicks.
 *** Modified compiler.py to pass stack index around
 ** Step 7 - other binaries
 [[http://webster.cs.ucr.edu/AoA/DOS/ch06/CH06-4.html#HEADING4-74][SETcc flag tests docs]]
+** Step 8 - let
+Had to modify grammar to allow brackets
+Variabel references are just symbols
+Pretty much just converted (b) into python.
