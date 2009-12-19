@@ -50,6 +50,11 @@ def get_label():
 def immediate_p(x):
     return isinstance(x, (int, Char)) or (List()==x)
 
+def variable_name(x):
+    if not isinstance(x, Symbol):
+        return None
+    return x[0]
+
 def immediate_rep(x):
     if isinstance(x, bool):
         return (x << BOOL_SHIFT) | BOOL_TAG
@@ -274,9 +279,31 @@ def emit_if(expr, si, env, f):
     emit_expr(expr[3], si, env, f)
     emit(f, "%s:" % over_label)
 
+@op('let', 2)
+def emit_let(expr, si, env, f):
+    bindings, inner = expr[1:]
+    new_env = dict(env)
+    for var, value in bindings:
+        name = variable_name(var)
+        assert name is not None, "Can't assign to %s" % var
+        emit_expr(value, si, env, f)
+        emit(f, "    movl %%eax, %d(%%esp)" % si) # stack save
+        new_env[name] = si
+        si -= WORD_SIZE
+    emit_expr(inner, si, new_env, f)
+
+def emit_variable_ref(x, env, f):
+    name = variable_name(x)
+    if name not in env:
+        raise Exception("Unknown variable: '%s'")
+    index = env[name]
+    emit(f, "    movl %d(%%esp), %%eax" % index)
+
 def emit_expr(x, si, env, f):
     if immediate_p(x):
         emit(f, "    movl $%d, %%eax" % immediate_rep(x))
+    elif variable_name(x):
+        emit_variable_ref(x, env, f)
     else:
         op = get_op(x)
         if op is not None:
