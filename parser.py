@@ -60,6 +60,9 @@ s_list = Or(
     (~Literal('(') & ~Whitespace()[:] & ~Literal(')')) > List,
     (~Literal('(') & s_datum[1:] & ~Literal(')')) > List,
     (~Literal('(') & (s_datum[1:] & ~Literal('.') & s_datum & ~Literal(')')) > DotList),
+    (~Literal('[') & ~Whitespace()[:] & ~Literal(']')) > List,
+    (~Literal('[') & s_datum[1:] & ~Literal(']')) > List,
+    (~Literal('[') & (s_datum[1:] & ~Literal('.') & s_datum & ~Literal(']')) > DotList),
     s_abbreviation)
 s_compound_datum = s_list # | s_vector
 s_symbol = s_identifier > Symbol

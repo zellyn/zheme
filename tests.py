@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 from parser import Symbol as S, List as L, Char as C
 from compiler import compile_and_run
 
@@ -522,47 +523,27 @@ TESTS = [
   ("(fx>= (fx+ 12 1) (fx+ -12 -1))", L(S("fx>="), L(S("fx+"), 12, 1), L(S("fx+"), -12, -1)), "#t"),
   ("(fx>= (fx+ -12 -1) (fx+ 12 1))", L(S("fx>="), L(S("fx+"), -12, -1), L(S("fx+"), 12, 1)), "#f"),
   )),
+
+("let",
+ (
+  ("(let ([x 5]) x)", L(S("let"), L(L(S("x"), 5)), S("x")),"5"),
+  ("(let ([x (fx+ 1 2)]) x)", L(S("let"), L(L(S("x"), L(S("fx+"), 1, 2))), S("x")),"3"),
+  ("(let ([x (fx+ 1 2)]) (let ([y (fx+ 3 4)]) (fx+ x y)))", L(S("let"), L(L(S("x"), L(S("fx+"), 1, 2))), L(S("let"), L(L(S("y"), L(S("fx+"), 3, 4))), L(S("fx+"), S("x"), S("y")))),"10"),
+  ("(let ([x (fx+ 1 2)]) (let ([y (fx+ 3 4)]) (fx- y x)))", L(S("let"), L(L(S("x"), L(S("fx+"), 1, 2))), L(S("let"), L(L(S("y"), L(S("fx+"), 3, 4))), L(S("fx-"), S("y"), S("x")))),"4"),
+  ("(let ([x (fx+ 1 2)] [y (fx+ 3 4)]) (fx- y x))", L(S("let"), L(L(S("x"), L(S("fx+"), 1, 2)), L(S("y"), L(S("fx+"), 3, 4))), L(S("fx-"), S("y"), S("x"))),"4"),
+  ("(let ([x (let ([y (fx+ 1 2)]) (fx* y y))]) (fx+ x x))", L(S("let"), L(L(S("x"), L(S("let"), L(L(S("y"), L(S("fx+"), 1, 2))), L(S("fx*"), S("y"), S("y"))))), L(S("fx+"), S("x"), S("x"))),"18"),
+  ("(let ([x (fx+ 1 2)]) (let ([x (fx+ 3 4)]) x))", L(S("let"), L(L(S("x"), L(S("fx+"), 1, 2))), L(S("let"), L(L(S("x"), L(S("fx+"), 3, 4))), S("x"))),"7"),
+  ("(let ([x (fx+ 1 2)]) (let ([x (fx+ x 4)]) x))", L(S("let"), L(L(S("x"), L(S("fx+"), 1, 2))), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), 4))), S("x"))),"7"),
+  ("(let ([t (let ([t (let ([t (let ([t (fx+ 1 2)]) t)]) t)]) t)]) t)", L(S("let"), L(L(S("t"), L(S("let"), L(L(S("t"), L(S("let"), L(L(S("t"), L(S("let"), L(L(S("t"), L(S("fx+"), 1, 2))), S("t")))), S("t")))), S("t")))), S("t")),"3"),
+  ("(let ([x 12]) (let ([x (fx+ x x)]) (let ([x (fx+ x x)]) (let ([x (fx+ x x)]) (fx+ x x)))))", L(S("let"), L(L(S("x"), 12)), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), S("x")))), L(S("fx+"), S("x"), S("x")))))),"192"),
+  )),
+
 ]
 
 # ----------------------------------------------------------------------
 #      Everything below here still needs to be converted to Python
 # ----------------------------------------------------------------------
 
-# (add-tests-with-string-output "let"
-#   [(let ([x 5]) x) => "5"]
-#   [(let ([x (fx+ 1 2)]) x) => "3"]
-#   [(let ([x (fx+ 1 2)])
-#      (let ([y (fx+ 3 4)])
-#        (fx+ x y)))
-#    => "10"]
-#   [(let ([x (fx+ 1 2)])
-#      (let ([y (fx+ 3 4)])
-#        (fx- y x)))
-#    => "4"]
-#   [(let ([x (fx+ 1 2)]
-#          [y (fx+ 3 4)])
-#      (fx- y x))
-#    => "4"]
-#   [(let ([x (let ([y (fx+ 1 2)]) (fx* y y))])
-#      (fx+ x x))
-#    => "18"]
-#   [(let ([x (fx+ 1 2)])
-#      (let ([x (fx+ 3 4)])
-#        x))
-#    => "7"]
-#   [(let ([x (fx+ 1 2)])
-#      (let ([x (fx+ x 4)])
-#        x))
-#    => "7"]
-#   [(let ([t (let ([t (let ([t (let ([t (fx+ 1 2)]) t)]) t)]) t)]) t)
-#    => "3"]
-#   [(let ([x 12])
-#      (let ([x (fx+ x x)])
-#        (let ([x (fx+ x x)])
-#          (let ([x (fx+ x x)])
-#            (fx+ x x)))))
-#    => "192"]
-# )
 
 # (add-tests-with-string-output "cons"
 #   [(fxadd1 0) => "1"]
@@ -2135,9 +2116,13 @@ TESTS = [
 
 from parser import parse
 
+start = 0
+if len(sys.argv)>1:
+    start = int(sys.argv[1])
+
 # Test parsing
-for (category, tests) in TESTS:
-    print(category)
+for cat_count, (category, tests) in enumerate(TESTS[start:]):
+    print("%d: %s" % (cat_count+start, category))
     for text, parse_e, result_e in tests:
         parse_a = parse(text)
         assert parse_a == parse_e, "[%s]: %s != %s" % (text, parse_a, parse_e)
