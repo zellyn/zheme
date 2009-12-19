@@ -60,103 +60,103 @@ def immediate_rep(x):
     else:
         raise Exception("Unknown immediate value: %s" % (x,))
 
-def func_p(x, names):
-    return isinstance(x, List) and isinstance(x[0], Symbol) and x[0][0] in names
-
 def get_op(x):
     if isinstance(x, List) and isinstance(x[0], Symbol):
         return x[0][0]
     return None
 
+def emit(f, s):
+    print(s, file=f)
+
 @op('fx+', 2)
 def emit_fx_plus(x, si, f):
     emit_expr(x[1], si, f)
-    print("    movl %%eax, %d(%%esp)" % si, file=f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
     emit_expr(x[2], si - WORD_SIZE, f)
-    print("    addl %d(%%esp), %%eax" % si, file=f)
+    emit(f, "    addl %d(%%esp), %%eax" % si)
 
 @op('$fxadd1', 1)
 def emit_fxadd1(x, si, f):
     emit_expr(x[1], si, f)
-    print("    addl $%d, %%eax" % immediate_rep(1), file=f)
+    emit(f, "    addl $%d, %%eax" % immediate_rep(1))
 
 @op('$fxsub1', 1)
 def emit_fxsub1(x, si, f):
     emit_expr(x[1], si, f)
-    print("    subl $%d, %%eax" % immediate_rep(1), file=f)
+    emit(f, "    subl $%d, %%eax" % immediate_rep(1))
 
 @op('$fixnum->char', 1)
 def emit_fixnum_char(x, si, f):
     emit_expr(x[1], si, f)
-    print("    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
-    print("    orl $%d, %%eax" % CHAR_TAG, file=f)
+    emit(f, "    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT))
+    emit(f, "    orl $%d, %%eax" % CHAR_TAG)
 
 @op('$char->fixnum', 1)
 def emit_char_fixnum(x, si, f):
     emit_expr(x[1], si, f)
-    print("    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
+    emit(f, "    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT))
 
 @op('fixnum?', 1)
 def emit_fixnum_p(x, si, f):
     emit_expr(x[1], si, f)
-    print("    and $%d, %%al" % FIXNUM_MASK, file=f)
-    print("    cmp $%d, %%al" % FIXNUM_TAG, file=f)
-    print("    sete %al", file=f)
-    print("    movzbl %al, %eax", file=f)
-    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-    print("    or $%d, %%al" % BOOL_TAG, file=f)
+    emit(f, "    and $%d, %%al" % FIXNUM_MASK)
+    emit(f, "    cmp $%d, %%al" % FIXNUM_TAG)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('boolean?', 1)
 def emit_boolean_p(x, si, f):
     emit_expr(x[1], si, f)
-    print("    and $%d, %%al" % BOOL_MASK, file=f)
-    print("    cmp $%d, %%al" % BOOL_TAG, file=f)
-    print("    sete %al", file=f)
-    print("    movzbl %al, %eax", file=f)
-    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-    print("    or $%d, %%al" % BOOL_TAG, file=f)
+    emit(f, "    and $%d, %%al" % BOOL_MASK)
+    emit(f, "    cmp $%d, %%al" % BOOL_TAG)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('char?', 1)
 def emit_char_p(x, si, f):
     emit_expr(x[1], si, f)
-    print("    and $%d, %%al" % CHAR_MASK, file=f)
-    print("    cmp $%d, %%al" % CHAR_TAG, file=f)
-    print("    sete %al", file=f)
-    print("    movzbl %al, %eax", file=f)
-    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-    print("    or $%d, %%al" % BOOL_TAG, file=f)
+    emit(f, "    and $%d, %%al" % CHAR_MASK)
+    emit(f, "    cmp $%d, %%al" % CHAR_TAG)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('$fxzero?', 1)
 def emit_fxzero_p(x, si, f):
     emit_expr(x[1], si, f)
-    print("    cmpl $0, %eax", file=f)
-    print("    sete %al", file=f)
-    print("    movzbl %al, %eax", file=f)
-    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-    print("    or $%d, %%al" % BOOL_TAG, file=f)
+    emit(f, "    cmpl $0, %eax")
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('null?', 1)
 def emit_null_p(x, si, f):
     emit_expr(x[1], si, f)
-    print("    cmpl $%d, %%eax" % EMPTY_LIST, file=f)
-    print("    sete %al", file=f)
-    print("    movzbl %al, %eax", file=f)
-    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-    print("    or $%d, %%al" % BOOL_TAG, file=f)
+    emit(f, "    cmpl $%d, %%eax" % EMPTY_LIST)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('not', 1)
 def emit_not(x, si, f):
     emit_expr(x[1], si, f)
-    print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
-    print("    sete %al", file=f)
-    print("    movzbl %al, %eax", file=f)
-    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-    print("    or $%d, %%al" % BOOL_TAG, file=f)
+    emit(f, "    cmpl $%d, %%eax" % BOOL_FALSE)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    sal $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('$fxlognot', 1)
 def emit_fxlognot(x, si, f):
     emit_expr(x[1], si, f)
-    print("    xorl $%d, %%eax" % 0xfffffffc, file=f)
+    emit(f, "    xorl $%d, %%eax" % 0xfffffffc)
 
 @op('and', 0, None)
 def emit_and(expr, si, f):
@@ -166,10 +166,10 @@ def emit_and(expr, si, f):
     over_label = get_label()
     for subex in expr[1:-1]:
         emit_expr(subex, si, f)
-        print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
-        print("    je %s" % over_label, file=f)
+        emit(f, "    cmpl $%d, %%eax" % BOOL_FALSE)
+        emit(f, "    je %s" % over_label)
     emit_expr(expr[-1], si, f)
-    print("%s:" % over_label, file=f)
+    emit(f, "%s:" % over_label)
 
 @op('or', 0, None)
 def emit_or(expr, si, f):
@@ -179,27 +179,27 @@ def emit_or(expr, si, f):
     over_label = get_label()
     for subex in expr[1:-1]:
         emit_expr(subex, si, f)
-        print("    cmpl $%d, %%eax" % BOOL_TRUE, file=f)
-        print("    je %s" % over_label, file=f)
+        emit(f, "    cmpl $%d, %%eax" % BOOL_TRUE)
+        emit(f, "    je %s" % over_label)
     emit_expr(expr[-1], si, f)
-    print("%s:" % over_label, file=f)
+    emit(f, "%s:" % over_label)
 
 @op('if', 3)
 def emit_if(expr, si, f):
     false_label = get_label()
     over_label = get_label()
     emit_expr(expr[1], si, f)
-    print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
-    print("    je %s" % false_label, file=f)
+    emit(f, "    cmpl $%d, %%eax" % BOOL_FALSE)
+    emit(f, "    je %s" % false_label)
     emit_expr(expr[2], si, f)
-    print("jmp %s" % over_label, file=f)
-    print("%s:" % false_label, file=f)
+    emit(f, "jmp %s" % over_label)
+    emit(f, "%s:" % false_label)
     emit_expr(expr[3], si, f)
-    print("%s:" % over_label, file=f)
+    emit(f, "%s:" % over_label)
 
 def emit_expr(x, si, f):
     if immediate_p(x):
-        print("    movl $%d, %%eax" % immediate_rep(x), file=f)
+        emit(f, "    movl $%d, %%eax" % immediate_rep(x))
     else:
         op = get_op(x)
         if op is not None:
@@ -211,19 +211,19 @@ def compile_program(x, text, f):
     # print "Compiling: %s" % x
     emit_function_header("L_scheme_entry", f)
     emit_expr(x, -WORD_SIZE, f)           # start at stack-4 (stack-0 is return addr)
-    print("    ret", file=f)
+    emit(f, "    ret")
 
     # wrapper - called by C, passed address of scheme stack
     emit_function_header("_scheme_entry", f)
-    print("    movl %esp, %ecx", file=f)      # save off c stack ptr
-    print("    movl 4(%esp), %esp", file=f)   # use scheme stack
-    print("    call L_scheme_entry", file=f)  # call actual compiled expression
-    print("    movl %ecx, %esp", file=f)      # restore c stack ptr
-    print("    ret", file=f)
+    emit(f, "    movl %esp, %ecx")      # save off c stack ptr
+    emit(f, "    movl 4(%esp), %esp")   # use scheme stack
+    emit(f, "    call L_scheme_entry")  # call actual compiled expression
+    emit(f, "    movl %ecx, %esp")      # restore c stack ptr
+    emit(f, "    ret")
 
 def emit_function_header(function_name, f):
-    print(".globl %s" % function_name, file=f)
-    print("%s:" % function_name, file=f)
+    emit(f, ".globl %s" % function_name)
+    emit(f, "%s:" % function_name)
 
 
 def compile_and_run(parse, text):
