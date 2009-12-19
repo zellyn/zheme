@@ -20,6 +20,27 @@ BOOL_FALSE = (0<<BOOL_SHIFT) | BOOL_TAG
 
 WORD_SIZE = 4
 
+__known_ops = dict()
+
+def op(name, min_args, max_args=-1):
+    def decorate(f):
+        __known_ops[name] = (f, min_args, max_args)
+        return f
+    return decorate
+
+def emit_op(name, expr, si, f):
+    func, min_args, max_args = __known_ops.get(name, (None, None, None))
+    if func is None:
+        raise Exception("Unknown op: %s" % name)
+
+    if max_args==-1:
+        assert len(expr)-1==min_args, "Expected %d args: %s" % (min_args, expr)
+    else:
+        assert len(expr)-1>=min_args, "Expected at least %d args: %s" % (min_args, expr)
+        if max_args is not None:
+            assert len(expr)-1<=max_args, "Expected at most %d args: %s" % (max_args, expr)
+    func(expr, si, f)
+
 __labels = itertools.count()
 def get_label():
     return "L_%d" % next(__labels)
@@ -42,149 +63,149 @@ def immediate_rep(x):
 def func_p(x, names):
     return isinstance(x, List) and isinstance(x[0], Symbol) and x[0][0] in names
 
-def primcall_p(x):
-    return func_p(x,  ['$fxadd1', '$fxsub1', '$fixnum->char', '$char->fixnum', 'fixnum?',
-                       '$fxzero?', 'null?', 'boolean?', 'char?', 'not', '$fxlognot'])
+def get_op(x):
+    if isinstance(x, List) and isinstance(x[0], Symbol):
+        return x[0][0]
+    return None
 
-def binary_p(x):
-    return func_p(x,  ['fx+'])
+@op('fx+', 2)
+def emit_fx_plus(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    movl %%eax, %d(%%esp)" % si, file=f)
+    emit_expr(x[2], si - WORD_SIZE, f)
+    print("    addl %d(%%esp), %%eax" % si, file=f)
 
-def and_p(x):
-    return func_p(x, ['and'])
+@op('$fxadd1', 1)
+def emit_fxadd1(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    addl $%d, %%eax" % immediate_rep(1), file=f)
 
-def or_p(x):
-    return func_p(x, ['or'])
+@op('$fxsub1', 1)
+def emit_fxsub1(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    subl $%d, %%eax" % immediate_rep(1), file=f)
 
-def if_p(x):
-    return func_p(x, ['if'])
+@op('$fixnum->char', 1)
+def emit_fixnum_char(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
+    print("    orl $%d, %%eax" % CHAR_TAG, file=f)
 
-def emit_binary(x, si, f):
-    s = x[0][0]
-    if s == 'fx+':
-        emit_expr(x[1], si, f)
-        print("    movl %%eax, %d(%%esp)" % si, file=f)
-        emit_expr(x[2], si - WORD_SIZE, f)
-        print("    addl %d(%%esp), %%eax" % si, file=f)
-    else:
-        raise Exception("Unknown binary: %s" % s)
+@op('$char->fixnum', 1)
+def emit_char_fixnum(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
 
-def emit_primcall(x, si, f):
-    s = x[0][0]
-    if s == '$fxadd1':
-        emit_expr(x[1], si, f)
-        print("    addl $%d, %%eax" % immediate_rep(1), file=f)
-    elif s == '$fxsub1':
-        emit_expr(x[1], si, f)
-        print("    subl $%d, %%eax" % immediate_rep(1), file=f)
-    elif s == '$fixnum->char':
-        emit_expr(x[1], si, f)
-        print("    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
-        print("    orl $%d, %%eax" % CHAR_TAG, file=f)
-    elif s == '$char->fixnum':
-        emit_expr(x[1], si, f)
-        print("    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
-    elif s == 'fixnum?':
-        emit_expr(x[1], si, f)
-        print("    and $%d, %%al" % FIXNUM_MASK, file=f)
-        print("    cmp $%d, %%al" % FIXNUM_TAG, file=f)
-        print("    sete %al", file=f)
-        print("    movzbl %al, %eax", file=f)
-        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-        print("    or $%d, %%al" % BOOL_TAG, file=f)
-    elif s == 'boolean?':
-        emit_expr(x[1], si, f)
-        print("    and $%d, %%al" % BOOL_MASK, file=f)
-        print("    cmp $%d, %%al" % BOOL_TAG, file=f)
-        print("    sete %al", file=f)
-        print("    movzbl %al, %eax", file=f)
-        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-        print("    or $%d, %%al" % BOOL_TAG, file=f)
-    elif s == 'char?':
-        emit_expr(x[1], si, f)
-        print("    and $%d, %%al" % CHAR_MASK, file=f)
-        print("    cmp $%d, %%al" % CHAR_TAG, file=f)
-        print("    sete %al", file=f)
-        print("    movzbl %al, %eax", file=f)
-        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-        print("    or $%d, %%al" % BOOL_TAG, file=f)
-    elif s == '$fxzero?':
-        emit_expr(x[1], si, f)
-        print("    cmpl $0, %eax", file=f)
-        print("    sete %al", file=f)
-        print("    movzbl %al, %eax", file=f)
-        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-        print("    or $%d, %%al" % BOOL_TAG, file=f)
-    elif s == 'null?':
-        emit_expr(x[1], si, f)
-        print("    cmpl $%d, %%eax" % EMPTY_LIST, file=f)
-        print("    sete %al", file=f)
-        print("    movzbl %al, %eax", file=f)
-        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-        print("    or $%d, %%al" % BOOL_TAG, file=f)
-    elif s == 'not':
-        emit_expr(x[1], si, f)
-        print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
-        print("    sete %al", file=f)
-        print("    movzbl %al, %eax", file=f)
-        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
-        print("    or $%d, %%al" % BOOL_TAG, file=f)
-    elif s == '$fxlognot':
-        emit_expr(x[1], si, f)
-        print("    xorl $%d, %%eax" % 0xfffffffc, file=f)
-    else:
-        raise Exception("Unknown primcall: %s" % s)
+@op('fixnum?', 1)
+def emit_fixnum_p(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    and $%d, %%al" % FIXNUM_MASK, file=f)
+    print("    cmp $%d, %%al" % FIXNUM_TAG, file=f)
+    print("    sete %al", file=f)
+    print("    movzbl %al, %eax", file=f)
+    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+    print("    or $%d, %%al" % BOOL_TAG, file=f)
 
-def emit_and(exprs, si, f):
-    if not exprs:
+@op('boolean?', 1)
+def emit_boolean_p(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    and $%d, %%al" % BOOL_MASK, file=f)
+    print("    cmp $%d, %%al" % BOOL_TAG, file=f)
+    print("    sete %al", file=f)
+    print("    movzbl %al, %eax", file=f)
+    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+    print("    or $%d, %%al" % BOOL_TAG, file=f)
+
+@op('char?', 1)
+def emit_char_p(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    and $%d, %%al" % CHAR_MASK, file=f)
+    print("    cmp $%d, %%al" % CHAR_TAG, file=f)
+    print("    sete %al", file=f)
+    print("    movzbl %al, %eax", file=f)
+    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+    print("    or $%d, %%al" % BOOL_TAG, file=f)
+
+@op('$fxzero?', 1)
+def emit_fxzero_p(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    cmpl $0, %eax", file=f)
+    print("    sete %al", file=f)
+    print("    movzbl %al, %eax", file=f)
+    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+    print("    or $%d, %%al" % BOOL_TAG, file=f)
+
+@op('null?', 1)
+def emit_null_p(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    cmpl $%d, %%eax" % EMPTY_LIST, file=f)
+    print("    sete %al", file=f)
+    print("    movzbl %al, %eax", file=f)
+    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+    print("    or $%d, %%al" % BOOL_TAG, file=f)
+
+@op('not', 1)
+def emit_not(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
+    print("    sete %al", file=f)
+    print("    movzbl %al, %eax", file=f)
+    print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+    print("    or $%d, %%al" % BOOL_TAG, file=f)
+
+@op('$fxlognot', 1)
+def emit_fxlognot(x, si, f):
+    emit_expr(x[1], si, f)
+    print("    xorl $%d, %%eax" % 0xfffffffc, file=f)
+
+@op('and', 0, None)
+def emit_and(expr, si, f):
+    if len(expr)==1:
         emit_expr(True, si, f)
         return
     over_label = get_label()
-    for expr in exprs[:-1]:
-        emit_expr(expr, si, f)
+    for subex in expr[1:-1]:
+        emit_expr(subex, si, f)
         print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
         print("    je %s" % over_label, file=f)
-    emit_expr(exprs[-1], si, f)
+    emit_expr(expr[-1], si, f)
     print("%s:" % over_label, file=f)
 
-def emit_or(exprs, si, f):
-    if not exprs:
+@op('or', 0, None)
+def emit_or(expr, si, f):
+    if len(expr)==1:
         emit_expr(False, si, f)
         return
     over_label = get_label()
-    for expr in exprs[:-1]:
-        emit_expr(expr, si, f)
+    for subex in expr[1:-1]:
+        emit_expr(subex, si, f)
         print("    cmpl $%d, %%eax" % BOOL_TRUE, file=f)
         print("    je %s" % over_label, file=f)
-    emit_expr(exprs[-1], si, f)
+    emit_expr(expr[-1], si, f)
     print("%s:" % over_label, file=f)
 
-def emit_if(exprs, si, f):
+@op('if', 3)
+def emit_if(expr, si, f):
     false_label = get_label()
     over_label = get_label()
-    emit_expr(exprs[0], si, f)
+    emit_expr(expr[1], si, f)
     print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
     print("    je %s" % false_label, file=f)
-    emit_expr(exprs[1], si, f)
+    emit_expr(expr[2], si, f)
     print("jmp %s" % over_label, file=f)
     print("%s:" % false_label, file=f)
-    emit_expr(exprs[2], si, f)
+    emit_expr(expr[3], si, f)
     print("%s:" % over_label, file=f)
 
 def emit_expr(x, si, f):
     if immediate_p(x):
         print("    movl $%d, %%eax" % immediate_rep(x), file=f)
-    elif primcall_p(x):
-        emit_primcall(x, si, f)
-    elif binary_p(x):
-        emit_binary(x, si, f)
-    elif and_p(x):
-        emit_and(x[1:], si, f)
-    elif or_p(x):
-        emit_or(x[1:], si, f)
-    elif if_p(x):
-        emit_if(x[1:], si, f)
     else:
-        raise Exception("Unknown value: %s" % (x,))
+        op = get_op(x)
+        if op is not None:
+            emit_op(op, x, si, f)
+        else:
+            raise Exception("Unknown value: %s" % (x,))
 
 def compile_program(x, text, f):
     # print "Compiling: %s" % x
