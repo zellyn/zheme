@@ -1,5 +1,3 @@
-#!bin/python
-
 import itertools
 import subprocess
 from parser import Symbol, List, Char
@@ -24,7 +22,7 @@ WORD_SIZE = 4
 
 __labels = itertools.count()
 def get_label():
-    return "L_%d" % __labels.next()
+    return "L_%d" % next(__labels)
 
 def immediate_p(x):
     return isinstance(x, (int, Char)) or (List()==x)
@@ -64,9 +62,9 @@ def emit_binary(x, si, f):
     s = x[0][0]
     if s == 'fx+':
         emit_expr(x[1], si, f)
-        print >>f, "    movl %%eax, %d(%%esp)" % si
+        print("    movl %%eax, %d(%%esp)" % si, file=f)
         emit_expr(x[2], si - WORD_SIZE, f)
-        print >>f, "    addl %d(%%esp), %%eax" % si
+        print("    addl %d(%%esp), %%eax" % si, file=f)
     else:
         raise Exception("Unknown binary: %s" % s)
 
@@ -74,65 +72,65 @@ def emit_primcall(x, si, f):
     s = x[0][0]
     if s == '$fxadd1':
         emit_expr(x[1], si, f)
-        print >>f, "    addl $%d, %%eax" % immediate_rep(1)
+        print("    addl $%d, %%eax" % immediate_rep(1), file=f)
     elif s == '$fxsub1':
         emit_expr(x[1], si, f)
-        print >>f, "    subl $%d, %%eax" % immediate_rep(1)
+        print("    subl $%d, %%eax" % immediate_rep(1), file=f)
     elif s == '$fixnum->char':
         emit_expr(x[1], si, f)
-        print >>f, "    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT)
-        print >>f, "    orl $%d, %%eax" % CHAR_TAG
+        print("    sall $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
+        print("    orl $%d, %%eax" % CHAR_TAG, file=f)
     elif s == '$char->fixnum':
         emit_expr(x[1], si, f)
-        print >>f, "    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT)
+        print("    shrl $%d, %%eax" % (CHAR_SHIFT - FIXNUM_SHIFT), file=f)
     elif s == 'fixnum?':
         emit_expr(x[1], si, f)
-        print >>f, "    and $%d, %%al" % FIXNUM_MASK
-        print >>f, "    cmp $%d, %%al" % FIXNUM_TAG
-        print >>f, "    sete %al"
-        print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
-        print >>f, "    or $%d, %%al" % BOOL_TAG
+        print("    and $%d, %%al" % FIXNUM_MASK, file=f)
+        print("    cmp $%d, %%al" % FIXNUM_TAG, file=f)
+        print("    sete %al", file=f)
+        print("    movzbl %al, %eax", file=f)
+        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+        print("    or $%d, %%al" % BOOL_TAG, file=f)
     elif s == 'boolean?':
         emit_expr(x[1], si, f)
-        print >>f, "    and $%d, %%al" % BOOL_MASK
-        print >>f, "    cmp $%d, %%al" % BOOL_TAG
-        print >>f, "    sete %al"
-        print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
-        print >>f, "    or $%d, %%al" % BOOL_TAG
+        print("    and $%d, %%al" % BOOL_MASK, file=f)
+        print("    cmp $%d, %%al" % BOOL_TAG, file=f)
+        print("    sete %al", file=f)
+        print("    movzbl %al, %eax", file=f)
+        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+        print("    or $%d, %%al" % BOOL_TAG, file=f)
     elif s == 'char?':
         emit_expr(x[1], si, f)
-        print >>f, "    and $%d, %%al" % CHAR_MASK
-        print >>f, "    cmp $%d, %%al" % CHAR_TAG
-        print >>f, "    sete %al"
-        print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
-        print >>f, "    or $%d, %%al" % BOOL_TAG
+        print("    and $%d, %%al" % CHAR_MASK, file=f)
+        print("    cmp $%d, %%al" % CHAR_TAG, file=f)
+        print("    sete %al", file=f)
+        print("    movzbl %al, %eax", file=f)
+        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+        print("    or $%d, %%al" % BOOL_TAG, file=f)
     elif s == '$fxzero?':
         emit_expr(x[1], si, f)
-        print >>f, "    cmpl $0, %eax"
-        print >>f, "    sete %al"
-        print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
-        print >>f, "    or $%d, %%al" % BOOL_TAG
+        print("    cmpl $0, %eax", file=f)
+        print("    sete %al", file=f)
+        print("    movzbl %al, %eax", file=f)
+        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+        print("    or $%d, %%al" % BOOL_TAG, file=f)
     elif s == 'null?':
         emit_expr(x[1], si, f)
-        print >>f, "    cmpl $%d, %%eax" % EMPTY_LIST
-        print >>f, "    sete %al"
-        print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
-        print >>f, "    or $%d, %%al" % BOOL_TAG
+        print("    cmpl $%d, %%eax" % EMPTY_LIST, file=f)
+        print("    sete %al", file=f)
+        print("    movzbl %al, %eax", file=f)
+        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+        print("    or $%d, %%al" % BOOL_TAG, file=f)
     elif s == 'not':
         emit_expr(x[1], si, f)
-        print >>f, "    cmpl $%d, %%eax" % BOOL_FALSE
-        print >>f, "    sete %al"
-        print >>f, "    movzbl %al, %eax"
-        print >>f, "    sal $%d, %%al" % BOOL_SHIFT
-        print >>f, "    or $%d, %%al" % BOOL_TAG
+        print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
+        print("    sete %al", file=f)
+        print("    movzbl %al, %eax", file=f)
+        print("    sal $%d, %%al" % BOOL_SHIFT, file=f)
+        print("    or $%d, %%al" % BOOL_TAG, file=f)
     elif s == '$fxlognot':
         emit_expr(x[1], si, f)
-        print >>f, "    xorl $%d, %%eax" % 0xfffffffc
+        print("    xorl $%d, %%eax" % 0xfffffffc, file=f)
     else:
         raise Exception("Unknown primcall: %s" % s)
 
@@ -143,10 +141,10 @@ def emit_and(exprs, si, f):
     over_label = get_label()
     for expr in exprs[:-1]:
         emit_expr(expr, si, f)
-        print >>f, "    cmpl $%d, %%eax" % BOOL_FALSE
-        print >>f, "    je %s" % over_label
+        print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
+        print("    je %s" % over_label, file=f)
     emit_expr(exprs[-1], si, f)
-    print >>f, "%s:" % over_label
+    print("%s:" % over_label, file=f)
 
 def emit_or(exprs, si, f):
     if not exprs:
@@ -155,26 +153,26 @@ def emit_or(exprs, si, f):
     over_label = get_label()
     for expr in exprs[:-1]:
         emit_expr(expr, si, f)
-        print >>f, "    cmpl $%d, %%eax" % BOOL_TRUE
-        print >>f, "    je %s" % over_label
+        print("    cmpl $%d, %%eax" % BOOL_TRUE, file=f)
+        print("    je %s" % over_label, file=f)
     emit_expr(exprs[-1], si, f)
-    print >>f, "%s:" % over_label
+    print("%s:" % over_label, file=f)
 
 def emit_if(exprs, si, f):
     false_label = get_label()
     over_label = get_label()
     emit_expr(exprs[0], si, f)
-    print >>f, "    cmpl $%d, %%eax" % BOOL_FALSE
-    print >>f, "    je %s" % false_label
+    print("    cmpl $%d, %%eax" % BOOL_FALSE, file=f)
+    print("    je %s" % false_label, file=f)
     emit_expr(exprs[1], si, f)
-    print >>f, "jmp %s" % over_label
-    print >>f, "%s:" % false_label
+    print("jmp %s" % over_label, file=f)
+    print("%s:" % false_label, file=f)
     emit_expr(exprs[2], si, f)
-    print >>f, "%s:" % over_label
+    print("%s:" % over_label, file=f)
 
 def emit_expr(x, si, f):
     if immediate_p(x):
-        print >>f, "    movl $%d, %%eax" % immediate_rep(x)
+        print("    movl $%d, %%eax" % immediate_rep(x), file=f)
     elif primcall_p(x):
         emit_primcall(x, si, f)
     elif binary_p(x):
@@ -192,19 +190,19 @@ def compile_program(x, text, f):
     # print "Compiling: %s" % x
     emit_function_header("L_scheme_entry", f)
     emit_expr(x, -WORD_SIZE, f)           # start at stack-4 (stack-0 is return addr)
-    print >>f, "    ret"
+    print("    ret", file=f)
 
     # wrapper - called by C, passed address of scheme stack
     emit_function_header("_scheme_entry", f)
-    print >>f, "    movl %esp, %ecx"      # save off c stack ptr
-    print >>f, "    movl 4(%esp), %esp"   # use scheme stack
-    print >>f, "    call L_scheme_entry"  # call actual compiled expression
-    print >>f, "    movl %ecx, %esp"      # restore c stack ptr
-    print >>f, "    ret"
+    print("    movl %esp, %ecx", file=f)      # save off c stack ptr
+    print("    movl 4(%esp), %esp", file=f)   # use scheme stack
+    print("    call L_scheme_entry", file=f)  # call actual compiled expression
+    print("    movl %ecx, %esp", file=f)      # restore c stack ptr
+    print("    ret", file=f)
 
 def emit_function_header(function_name, f):
-    print >> f, ".globl %s" % function_name
-    print >> f, "%s:" % function_name
+    print(".globl %s" % function_name, file=f)
+    print("%s:" % function_name, file=f)
 
 
 def compile_and_run(parse, text):
@@ -216,7 +214,7 @@ def compile_and_run(parse, text):
     assert r==0, "Compile failed: [%s]" % (text,)
     # ./stst > stst.out
     p = subprocess.Popen(["./stst"], stdout=subprocess.PIPE)
-    output = p.communicate()[0]
+    output = p.communicate()[0].decode('utf-8')
     if output.endswith("\n"):
         output = output[:-1]
     assert p.returncode==0, "Run failed: [%s]" % (text,)

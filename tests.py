@@ -1,4 +1,4 @@
-#!bin/python
+#!/usr/bin/env python3
 from parser import Symbol as S, List as L, Char as C
 from compiler import compile_and_run
 
@@ -2134,7 +2134,7 @@ from parser import parse
 
 # Test parsing
 for (category, tests) in TESTS:
-    print category
+    print(category)
     for text, parse_e, result_e in tests:
         parse_a = parse(text)
         assert parse_a == parse_e, "[%s]: %s != %s" % (text, parse_a, parse_e)
