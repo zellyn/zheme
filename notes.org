@@ -51,3 +51,8 @@ Not really in docs, just in tests. Needs labels, but no stack.
 Implemented 'if'. Sort-of from (b), but easy after 'and'
 $fxsub1 needed for 'and' tests.
 Implemented 'or' just for kicks.
+** Step 6 - '+'
+*** Copied stack stuff from (b) into runtime.c
+- needed #include <sys/mman.h>
+- s/MAP_ANONYMOUS/MAP_ANON/
+*** Modified compiler.py to pass stack index around
