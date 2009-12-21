@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys
+import sys, time
 from parser import Symbol as S, List as L, Char as C
 from compiler import compile_and_run
 
@@ -2117,14 +2117,22 @@ TESTS = [
 from parser import parse
 
 start = 0
+compile=True
 if len(sys.argv)>1:
     start = int(sys.argv[1])
+    if len(sys.argv)>2:
+        assert sys.argv[2]=='nocompile'
+        compile = False
 
-# Test parsing
+start_time = time.time()
+# Test parsing and (optionally, compilation)
 for cat_count, (category, tests) in enumerate(TESTS[start:]):
     print("%d: %s" % (cat_count+start, category))
     for text, parse_e, result_e in tests:
         parse_a = parse(text)
         assert parse_a == parse_e, "[%s]: %s != %s" % (text, parse_a, parse_e)
-        result_a = compile_and_run(parse_a, text)
-        assert result_a == result_e, "[%s]: %s != %s" % (text, result_a, result_e)
+        if compile:
+            result_a = compile_and_run(parse_a, text)
+            assert result_a == result_e, "[%s]: %s != %s" % (text, result_a, result_e)
+end_time = time.time()
+print("--- time: %.2f seconds ---" % (end_time-start_time))
