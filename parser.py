@@ -91,8 +91,10 @@ s_symbol = t_identifier > Symbol
 s_simple_datum = t_boolean | t_number | t_character | t_string | s_symbol
 s_datum += (s_simple_datum | s_compound_datum)
 
+parser = s_datum.string_parser()
+
 def parse(s):
-    p = s_datum.parse(s)
+    p = parser(s)
     if p is not None:
         return p[0]
     else:
