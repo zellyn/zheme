@@ -40,7 +40,7 @@ def make_char(s):
 
 # s_character = (Literal('#\\newline'), Literal('#\\tab'), Literal('#\\space'),
 #                Literal('#\\return'), DfaRegexp('#\\\\[^ \r\n\t\f\v]'))
-s_character = DfaRegexp('#\\\\(newline|tab|space|return|[a-zA-Z0-9])')
+s_character = DfaRegexp('#\\\\(newline|tab|space|return|[^ \r\n\t\f\v])')
 t_character = Token(s_character) >> make_char
 
 s_boolean = (Literal('#f') | Literal('#t'))
