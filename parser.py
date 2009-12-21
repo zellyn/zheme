@@ -38,36 +38,60 @@ def make_char(s):
     return Char(SPECIALS.get(s[2:]))
 
 
-s_character = Or(Literal('#\\newline'), Literal('#\\tab'), Literal('#\\space'),
-                 Literal('#\\return'), DfaRegexp('#\\\\[^ \r\n\t\f\v]')) >> make_char
-s_boolean = (Literal('#f') | Literal('#t')) >> to_bool
-s_string = String()
-s_number = Float() >> float_or_int
+# s_character = (Literal('#\\newline'), Literal('#\\tab'), Literal('#\\space'),
+#                Literal('#\\return'), DfaRegexp('#\\\\[^ \r\n\t\f\v]'))
+s_character = DfaRegexp('#\\\\(newline|tab|space|return|[a-zA-Z0-9])')
+t_character = Token(s_character) >> make_char
 
-s_special_initial = DfaRegexp('[!\\$%&\\*/:<=>\\?\\^_~]')
-s_letter = Letter()
-s_initial = s_letter | s_special_initial
-s_peculiar_identifier = Literal('+') | Literal('-') | Literal('...')
-s_special_subsequent = DfaRegexp('[\\+\\.@\\-]')
-s_digit = Digit()
-s_subsequent = s_initial | s_digit | s_special_subsequent
-s_identifier = Word(s_initial, s_subsequent) | s_peculiar_identifier
+s_boolean = (Literal('#f') | Literal('#t'))
+t_boolean = Token(s_boolean) >> to_bool
+
+# s_string = String()
+s_string = DfaRegexp(r'"[^"\\]*(\\.[^"\\]*)*"')
+t_string = Token(s_string)
+
+s_number = Float()
+t_number = Token(s_number) >> float_or_int
+
+# s_special_initial = DfaRegexp('[!\\$%&\\*/:<=>\\?\\^_~]')
+# s_letter = Letter()
+# s_initial = s_letter | s_special_initial
+# s_peculiar_identifier = Literal('+') | Literal('-') | Literal('...')
+# s_special_subsequent = DfaRegexp('[\\+\\.@\\-]')
+# s_digit = Digit()
+# s_subsequent = s_initial | s_digit | s_special_subsequent
+# s_identifier = Word(s_initial, s_subsequent) | s_peculiar_identifier
+ch_initial = 'a-zA-Z!\\$%&\\*/:<=>\\?\\^_~'
+ch_digit = '0-9'
+ch_special_subsequent = '\\+\\.@\\-'
+ch_subsequent = ''.join([ch_initial, ch_digit, ch_special_subsequent])
+
+s_identifier = DfaRegexp('(\\+|\\-|\\.\\.\\.|[%s][%s]*)' % (ch_initial, ch_subsequent))
+t_identifier = Token(s_identifier)
 
 s_datum = Delayed()
 s_abbrev_prefix = Literal("'") | Literal("`") | Literal(",") | Literal(",@")
-s_abbreviation = s_abbrev_prefix & s_datum
+t_abbrev_prefix = Token(s_abbrev_prefix)
+s_abbreviation = t_abbrev_prefix & s_datum
+
+t_lparen = Token(Literal('('))
+t_rparen = Token(Literal(')'))
+t_lbrack = Token(Literal('['))
+t_rbrack = Token(Literal(']'))
+t_dot = Token(Literal('.'))
+
 s_list = Or(
-    (~Literal('(') & ~Whitespace()[:] & ~Literal(')')) > List,
-    (~Literal('(') & s_datum[1:] & ~Literal(')')) > List,
-    (~Literal('(') & (s_datum[1:] & ~Literal('.') & s_datum & ~Literal(')')) > DotList),
-    (~Literal('[') & ~Whitespace()[:] & ~Literal(']')) > List,
-    (~Literal('[') & s_datum[1:] & ~Literal(']')) > List,
-    (~Literal('[') & (s_datum[1:] & ~Literal('.') & s_datum & ~Literal(']')) > DotList),
+    (~t_lparen & s_datum[:] & ~t_rparen) > List,
+    (~t_lparen & (s_datum[1:] & ~t_dot & s_datum & ~t_rparen) > DotList),
+    (~t_lbrack & s_datum[:] & ~t_rbrack) > List,
+    (~t_lbrack & (s_datum[1:] & ~t_dot & s_datum & ~t_rbrack) > DotList),
     s_abbreviation)
 s_compound_datum = s_list # | s_vector
-s_symbol = s_identifier > Symbol
-s_simple_datum = s_boolean | s_number | s_character | s_string | s_symbol
-s_datum += ~Whitespace()[:] & (s_simple_datum | s_compound_datum) & ~Whitespace()[:]
+s_symbol = t_identifier > Symbol
+s_simple_datum = t_boolean | t_number | t_character | t_string | s_symbol
+s_datum += (s_simple_datum | s_compound_datum)
+
+parser = s_datum.string_parser()
 
 parser = s_datum.string_parser()
 
