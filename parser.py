@@ -69,8 +69,10 @@ s_symbol = s_identifier > Symbol
 s_simple_datum = s_boolean | s_number | s_character | s_string | s_symbol
 s_datum += ~Whitespace()[:] & (s_simple_datum | s_compound_datum) & ~Whitespace()[:]
 
+parser = s_datum.string_parser()
+
 def parse(s):
-    p = s_datum.parse(s)
+    p = parser(s)
     if p is not None:
         return p[0]
     else:
