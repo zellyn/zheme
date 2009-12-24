@@ -20,6 +20,27 @@ BOOL_TAG   = 0b0011111
 BOOL_TRUE  = (1<<BOOL_SHIFT) | BOOL_TAG
 BOOL_FALSE = (0<<BOOL_SHIFT) | BOOL_TAG
 
+PAIR_TAG     = 0b001
+PAIR_MASK    = 0b111
+CAR_OFFSET = 0
+CDR_OFFSET = 4
+PAIR_SIZE = 8
+CAR_TAG_OFFSET = CAR_OFFSET - PAIR_TAG # -1
+CDR_TAG_OFFSET = CDR_OFFSET - PAIR_TAG # 3
+
+CLOSURE_TAG  = 0b010
+CLOSURE_MASK = 0b111
+SYMBOL_TAG   = 0b011
+SYMBOAL_MASK = 0b111
+VECTOR_TAG   = 0b101
+VECTOR_MASK  = 0b111
+STRING_TAG   = 0b110
+STRING_MASK  = 0b111
+
+# VECTOR_TAG  = 0b101
+# VECTOR_MASK = 0b111
+
+
 WORD_SIZE = 4
 
 __known_ops = dict()
@@ -292,6 +313,38 @@ def emit_let(expr, si, env, f):
         si -= WORD_SIZE
     emit_expr(inner, si, new_env, f)
 
+@op('pair?', 1)
+def emit_pair_p(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    and $%d, %%al" % PAIR_MASK)
+    emit(f, "    cmp $%d, %%al" % PAIR_TAG)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
+
+@op('cons', 2)
+def emit_cons(x, si, env, f):
+    emit_expr(x[2], si, env, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si) # save cdr
+    emit_expr(x[1], si - WORD_SIZE, env, f)
+    emit(f, "    movl %%eax, %d(%%ebp)" % CAR_OFFSET)
+    emit(f, "    movl %d(%%esp), %%eax" % si) # restore cdr
+    emit(f, "    movl %%eax, %d(%%ebp)" % CDR_OFFSET)
+    emit(f, "    movl %ebp, %eax")
+    emit(f, "    addl $%d, %%ebp" % PAIR_SIZE)
+    emit(f, "    orl $%d, %%eax" % PAIR_TAG)
+
+@op('car', 1)
+def emit_car(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    movl %d(%%eax), %%eax" % CAR_TAG_OFFSET)
+
+@op('cdr', 1)
+def emit_cdr(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    movl %d(%%eax), %%eax" % CDR_TAG_OFFSET)
+
 def emit_variable_ref(x, env, f):
     name = variable_name(x)
     if name not in env:
@@ -319,10 +372,21 @@ def compile_program(x, text, f):
 
     # wrapper - called by C, passed address of scheme stack
     emit_function_header("_scheme_entry", f)
-    emit(f, "    movl %esp, %ecx")      # save off c stack ptr
-    emit(f, "    movl 4(%esp), %esp")   # use scheme stack
+    # page 39 of (b)
+    emit(f, "    movl 4(%esp), %ecx")   # ARG: REGISTER STRUCT
+    emit(f, "    movl %ebx, 4(%ecx)")   # save ebx
+    emit(f, "    movl %esi, 16(%ecx)")  # save esi
+    emit(f, "    movl %edi, 20(%ecx)")  # save edi
+    emit(f, "    movl %ebp, 24(%ecx)")  # save ebp
+    emit(f, "    movl %esp, 28(%ecx)")  # save esp
+    emit(f, "    movl 12(%esp), %ebp")  # ARG: HEAP
+    emit(f, "    movl 8(%esp), %esp")   # ARG: STACK
     emit(f, "    call L_scheme_entry")  # call actual compiled expression
-    emit(f, "    movl %ecx, %esp")      # restore c stack ptr
+    emit(f, "    movl 4(%ecx), %ebx")   # restore ebx
+    emit(f, "    movl 16(%ecx), %esi")   # restore esi
+    emit(f, "    movl 20(%ecx), %edi")   # restore edi
+    emit(f, "    movl 24(%ecx), %ebp")   # restore ebp
+    emit(f, "    movl 28(%ecx), %esp")   # restore esp
     emit(f, "    ret")
 
 def emit_function_header(function_name, f):

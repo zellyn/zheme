@@ -16,6 +16,21 @@
 #define BOOL_MASK 0x7f
 #define BOOL_TAG 0x1f
 
+#define PAIR_TAG 0x01
+#define PAIR_MASK 0x07
+
+
+typedef struct {
+    void* eax;    /* 0    scratch  */
+    void* ebx;    /* 4    preserve */
+    void* ecx;    /* 8    scratch  */
+    void* edx;    /* 12   scratch  */
+    void* esi;    /* 16   preserve */
+    void* edi;    /* 20   preserve */
+    void* ebp;    /* 24   preserve */
+    void* esp;    /* 28   preserve */
+} context;
+
 static char* allocate_protected_space(int size) {
     int page = getpagesize();
     int status;
@@ -48,41 +63,78 @@ static void deallocate_protected_space(char* p, int size) {
     }
 }
 
-void print_val(int val) {
+int pair_p(int val) {
+    return ((val & PAIR_MASK) == PAIR_TAG);
+}
+
+void print_expr(int val);
+
+void print_list(int val) {
+    int* addr = (int*)(val - PAIR_TAG);
+    printf("(");
+    print_expr(addr[0]);
+    while (pair_p(addr[1])) {
+        printf(" ");
+        addr = (int*)(addr[1] - PAIR_TAG);
+        print_expr(addr[0]);
+    }
+    if (addr[1]!=EMPTY_LIST) {
+        printf(" . ");
+        print_expr(addr[1]);
+    }
+    printf(")");
+}
+
+void print_expr(int val) {
     if ((val & FIXNUM_MASK) == FIXNUM_TAG) {
-        printf("%d\n", val >> FIXNUM_SHIFT);
+        printf("%d", val >> FIXNUM_SHIFT);
     }
     else if ((val & CHAR_MASK) == CHAR_TAG) {
         int c = val >> CHAR_SHIFT;
         switch (c) {
-        case '\t': printf("#\\tab\n"); break;
-        case '\n': printf("#\\newline\n"); break;
-        case '\r': printf("#\\return\n"); break;
-        case ' ': printf("#\\space\n"); break;
+        case '\t': printf("#\\tab"); break;
+        case '\n': printf("#\\newline"); break;
+        case '\r': printf("#\\return"); break;
+        case ' ': printf("#\\space"); break;
         default:
-            printf("#\\%c\n", c);
+            printf("#\\%c", c);
         }
     }
     else if ((val & BOOL_MASK) == BOOL_TAG) {
         if ((val >> BOOL_SHIFT) == 1) {
-            printf("#t\n");
+            printf("#t");
         } else {
-            printf("#f\n");
+            printf("#f");
         }
     }
     else if (val == EMPTY_LIST) {
-        printf("()\n");
+        printf("()");
     }
+    else if (pair_p(val)) {
+        print_list(val);
+    }
+    else {
+        printf("UNKNOWN!");
+    }
+}
+
+void print_val(int val) {
+    print_expr(val);
+    printf("\n");
 }
 
 int main(int argc, char** argv) {
     int stack_size = (16 * 4096);  /* holds 16K cells */
+    int heap_size = (16 * 4096);   /* ditto */
     char* stack_top = allocate_protected_space(stack_size);
     char* stack_base = stack_top + stack_size;
+    char* heap = allocate_protected_space(heap_size);
 
-    int val = scheme_entry(stack_base);
+    context ctxt;
+    int val = scheme_entry(&ctxt, stack_base, heap);
     print_val(val);
 
+    deallocate_protected_space(heap, heap_size);
     deallocate_protected_space(stack_top, stack_size);
     return 0;
 }

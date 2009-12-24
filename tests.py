@@ -538,60 +538,38 @@ TESTS = [
   ("(let ([x 12]) (let ([x (fx+ x x)]) (let ([x (fx+ x x)]) (let ([x (fx+ x x)]) (fx+ x x)))))", L(S("let"), L(L(S("x"), 12)), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("fx+"), S("x"), S("x")))), L(S("fx+"), S("x"), S("x")))))),"192"),
   )),
 
+("cons",
+ (("($fxadd1 0)", L(S("$fxadd1"), 0), "1"),
+  ("(pair? (cons 1 2))", L(S("pair?"), L(S("cons"), 1, 2)), "#t"),
+  ("(pair? 12)", L(S("pair?"), 12), "#f"),
+  ("(pair? #t)", L(S("pair?"), True), "#f"),
+  ("(pair? #f)", L(S("pair?"), False), "#f"),
+  ("(pair? ())", L(S("pair?"), L()), "#f"),
+  ("(fixnum? (cons 12 43))", L(S("fixnum?"), L(S("cons"), 12, 43)), "#f"),
+  ("(boolean? (cons 12 43))", L(S("boolean?"), L(S("cons"), 12, 43)), "#f"),
+  ("(null? (cons 12 43))", L(S("null?"), L(S("cons"), 12, 43)), "#f"),
+  ("(not (cons 12 43))", L(S("not"), L(S("cons"), 12, 43)), "#f"),
+  ("(if (cons 12 43) 32 43)", L(S("if"), L(S("cons"), 12, 43), 32, 43), "32"),
+  ("(car (cons 1 23))", L(S("car"), L(S("cons"), 1, 23)), "1"),
+  ("(cdr (cons 43 123))", L(S("cdr"), L(S("cons"), 43, 123)), "123"),
+  ("(car (car (cons (cons 12 3) (cons #t #f))))", L(S("car"), L(S("car"), L(S("cons"), L(S("cons"), 12, 3), L(S("cons"), True, False)))), "12"),
+  ("(cdr (car (cons (cons 12 3) (cons #t #f))))", L(S("cdr"), L(S("car"), L(S("cons"), L(S("cons"), 12, 3), L(S("cons"), True, False)))), "3"),
+  ("(car (cdr (cons (cons 12 3) (cons #t #f))))", L(S("car"), L(S("cdr"), L(S("cons"), L(S("cons"), 12, 3), L(S("cons"), True, False)))), "#t"),
+  ("(cdr (cdr (cons (cons 12 3) (cons #t #f))))", L(S("cdr"), L(S("cdr"), L(S("cons"), L(S("cons"), 12, 3), L(S("cons"), True, False)))), "#f"),
+  ("(let ([x (let ([y (fx+ 1 2)]) (fx* y y))]) (cons x (fx+ x x)))", L(S("let"), L(L(S("x"), L(S("let"), L(L(S("y"), L(S("fx+"), 1, 2))), L(S("fx*"), S("y"), S("y"))))), L(S("cons"), S("x"), L(S("fx+"), S("x"), S("x")))), "(9 . 18)"),
+  ("(let ([t0 (cons 1 2)] [t1 (cons 3 4)]) (let ([a0 (car t0)] [a1 (car t1)] [d0 (cdr t0)] [d1 (cdr t1)]) (let ([t0 (cons a0 d1)] [t1 (cons a1 d0)]) (cons t0 t1))))", L(S("let"), L(L(S("t0"), L(S("cons"), 1, 2)), L(S("t1"), L(S("cons"), 3, 4))), L(S("let"), L(L(S("a0"), L(S("car"), S("t0"))), L(S("a1"), L(S("car"), S("t1"))), L(S("d0"), L(S("cdr"), S("t0"))), L(S("d1"), L(S("cdr"), S("t1")))), L(S("let"), L(L(S("t0"), L(S("cons"), S("a0"), S("d1"))), L(S("t1"), L(S("cons"), S("a1"), S("d0")))), L(S("cons"), S("t0"), S("t1"))))), "((1 . 4) 3 . 2)"),
+  ("(let ([t (cons 1 2)]) (let ([t t]) (let ([t t]) (let ([t t]) t))))", L(S("let"), L(L(S("t"), L(S("cons"), 1, 2))), L(S("let"), L(L(S("t"), S("t"))), L(S("let"), L(L(S("t"), S("t"))), L(S("let"), L(L(S("t"), S("t"))), S("t"))))), "(1 . 2)"),
+  ("(let ([t (let ([t (let ([t (let ([t (cons 1 2)]) t)]) t)]) t)]) t)", L(S("let"), L(L(S("t"), L(S("let"), L(L(S("t"), L(S("let"), L(L(S("t"), L(S("let"), L(L(S("t"), L(S("cons"), 1, 2))), S("t")))), S("t")))), S("t")))), S("t")), "(1 . 2)"),
+  ("(cons 7 ())", None, "(7)"), # added by zjh
+  ("(let ([x ()]) (let ([x (cons x x)]) x))", None, "(())"), # added by zjh
+  ("(let ([x ()]) (let ([x (cons x x)]) (let ([x (cons x x)]) (let ([x (cons x x)]) (cons x x)))))", L(S("let"), L(L(S("x"), L())), L(S("let"), L(L(S("x"), L(S("cons"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("cons"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("x"), S("x")))))), "((((()) ()) (()) ()) ((()) ()) (()) ())"),
+  ("(cons (let ([x #t]) (let ([y (cons x x)]) (cons x y))) (cons (let ([x #f]) (let ([y (cons x x)]) (cons y x))) ()))", L(S("cons"), L(S("let"), L(L(S("x"), True)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("x"), S("y")))), L(S("cons"), L(S("let"), L(L(S("x"), False)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("y"), S("x")))), L())), "((#t #t . #t) ((#f . #f) . #f))"),
+  )),
 ]
 
 # ----------------------------------------------------------------------
 #      Everything below here still needs to be converted to Python
 # ----------------------------------------------------------------------
-
-
-# (add-tests-with-string-output "cons"
-#   [(fxadd1 0) => "1"]
-#   [(pair? (cons 1 2)) => "#t"]
-#   [(pair? 12) => "#f"]
-#   [(pair? #t) => "#f"]
-#   [(pair? #f) => "#f"]
-#   [(pair? ()) => "#f"]
-#   [(fixnum? (cons 12 43)) => "#f"]
-#   [(boolean? (cons 12 43)) => "#f"]
-#   [(null? (cons 12 43)) => "#f"]
-#   [(not (cons 12 43)) => "#f"]
-#   [(if (cons 12 43) 32 43) => "32"]
-#   [(car (cons 1 23)) => "1"]
-#   [(cdr (cons 43 123)) => "123"]
-#   [(car (car (cons (cons 12 3) (cons #t #f)))) => "12"]
-#   [(cdr (car (cons (cons 12 3) (cons #t #f)))) => "3"]
-#   [(car (cdr (cons (cons 12 3) (cons #t #f)))) => "#t"]
-#   [(cdr (cdr (cons (cons 12 3) (cons #t #f)))) => "#f"]
-#   [(let ([x (let ([y (fx+ 1 2)]) (fx* y y))])
-#      (cons x (fx+ x x)))
-#    => "(9 . 18)"]
-#   [(let ([t0 (cons 1 2)] [t1 (cons 3 4)])
-#      (let ([a0 (car t0)] [a1 (car t1)] [d0 (cdr t0)] [d1 (cdr t1)])
-#        (let ([t0 (cons a0 d1)] [t1 (cons a1 d0)])
-#          (cons t0 t1))))
-#    => "((1 . 4) 3 . 2)"]
-#   [(let ([t (cons 1 2)])
-#      (let ([t t])
-#        (let ([t t])
-#          (let ([t t])
-#            t))))
-#    => "(1 . 2)"]
-#   [(let ([t (let ([t (let ([t (let ([t (cons 1 2)]) t)]) t)]) t)]) t)
-#    => "(1 . 2)"]
-#   [(let ([x ()])
-#      (let ([x (cons x x)])
-#        (let ([x (cons x x)])
-#          (let ([x (cons x x)])
-#            (cons x x)))))
-#    => "((((()) ()) (()) ()) ((()) ()) (()) ())"]
-#   [(cons (let ([x #t]) (let ([y (cons x x)]) (cons x y)))
-#          (cons (let ([x #f]) (let ([y (cons x x)]) (cons y x)))
-#                ()))
-#    => "((#t #t . #t) ((#f . #f) . #f))"]
-# )
-
-
 
 # #!eof
 # (add-tests-with-string-output "procedures"
@@ -2130,7 +2108,8 @@ for cat_count, (category, tests) in enumerate(TESTS[start:]):
     print("%d: %s" % (cat_count+start, category))
     for text, parse_e, result_e in tests:
         parse_a = parse(text)
-        assert parse_a == parse_e, "[%s]: %s != %s" % (text, parse_a, parse_e)
+        if parse_e is not None:
+            assert parse_a == parse_e, "[%s]: %s != %s" % (text, parse_a, parse_e)
         if compile:
             result_a = compile_and_run(parse_a, text)
             assert result_a == result_e, "[%s]: %s != %s" % (text, result_a, result_e)

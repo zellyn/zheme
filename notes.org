@@ -62,3 +62,5 @@ Implemented 'or' just for kicks.
 Had to modify grammar to allow brackets
 Variabel references are just symbols
 Pretty much just converted (b) into python.
+** Step 9 - Cons (implement b/c it's next in the tests)
+Printing lists was tricky.
