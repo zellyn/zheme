@@ -565,294 +565,260 @@ TESTS = [
   ("(let ([x ()]) (let ([x (cons x x)]) (let ([x (cons x x)]) (let ([x (cons x x)]) (cons x x)))))", L(S("let"), L(L(S("x"), L())), L(S("let"), L(L(S("x"), L(S("cons"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("cons"), S("x"), S("x")))), L(S("let"), L(L(S("x"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("x"), S("x")))))), "((((()) ()) (()) ()) ((()) ()) (()) ())"),
   ("(cons (let ([x #t]) (let ([y (cons x x)]) (cons x y))) (cons (let ([x #f]) (let ([y (cons x x)]) (cons y x))) ()))", L(S("cons"), L(S("let"), L(L(S("x"), True)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("x"), S("y")))), L(S("cons"), L(S("let"), L(L(S("x"), False)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("y"), S("x")))), L())), "((#t #t . #t) ((#f . #f) . #f))"),
   )),
-]
 
-# ----------------------------------------------------------------------
-#      Everything below here still needs to be converted to Python
-# ----------------------------------------------------------------------
-
-# #!eof
-# (add-tests-with-string-output "procedures"
-#   [(letrec () 12) => "12"]
-#   [(letrec () (let ([x 5]) (fx+ x x))) => "10"]
-#   [(letrec ([f (lambda () 5)]) 7) => "7"]
-#   [(letrec ([f (lambda () 5)]) (let ([x 12]) x)) => "12"]
-#   [(letrec ([f (lambda () 5)]) (f)) => "5"]
-#   [(letrec ([f (lambda () 5)]) (let ([x (f)]) x)) => "5"]
-#   [(letrec ([f (lambda () 5)]) (fx+ (f) 6)) => "11"]
-#   [(letrec ([f (lambda () 5)]) (fx- 20 (f))) => "15"]
-#   [(letrec ([f (lambda () 5)]) (fx+ (f) (f))) => "10"]
-#   [(letrec ([f (lambda () (fx+ 5 7))]
-#             [g (lambda () 13)])
-#     (fx+ (f) (g))) => "25"]
-#   [(letrec ([f (lambda (x) (fx+ x 12))]) (f 13)) => "25"]
-#   [(letrec ([f (lambda (x) (fx+ x 12))]) (f (f 10))) => "34"]
-#   [(letrec ([f (lambda (x) (fx+ x 12))]) (f (f (f 0)))) => "36"]
-#   [(letrec ([f (lambda (x y) (fx+ x y))]
-#             [g (lambda (x) (fx+ x 12))])
-#     (f 16 (f (g 0) (fx+ 1 (g 0))))) => "41"]
-#   [(letrec ([f (lambda (x) (g x x))]
-#             [g (lambda (x y) (fx+ x y))])
-#      (f 12)) => "24"]
-#   [(letrec ([f (lambda (x)
-#                  (if (fxzero? x)
-#                      1
-#                      (fx* x (f (fxsub1 x)))))])
-#       (f 5)) => "120"]
-#   [(letrec ([e (lambda (x) (if (fxzero? x) #t (o (fxsub1 x))))]
-#             [o (lambda (x) (if (fxzero? x) #f (e (fxsub1 x))))])
-#      (e 25)) => "#f"]
-# )
-
-# (add-tests-with-string-output "deeply nested procedures"
-#   [(letrec ([sum (lambda (n ac)
-#                    (if (fxzero? n)
-#                         ac
-#                         (app sum (fxsub1 n) (fx+ n ac))))])
-#     (app sum 10000 0)) => "50005000"]
-#   [(letrec ([e (lambda (x) (if (fxzero? x) #t (app o (fxsub1 x))))]
-#             [o (lambda (x) (if (fxzero? x) #f (app e (fxsub1 x))))])
-#      (app e 5000000)) => "#t"]
-# )
-
-# (add-tests-with-string-output "begin/implicit-begin"
-#  [(begin 12) => "12"]
-#  [(begin 13 122) => "122"]
-#  [(begin 123 2343 #t) => "#t"]
-#  [(let ([t (begin 12 (cons 1 2))]) (begin t t)) => "(1 . 2)"]
-#  [(let ([t (begin 13 (cons 1 2))])
-#     (cons 1 t)
-#     t) => "(1 . 2)"]
-#  [(let ([t (cons 1 2)])
-#     (if (pair? t)
-#         (begin t)
-#         12)) => "(1 . 2)"]
-# )
-
-# (add-tests-with-string-output "set-car! set-cdr!"
-#   [(let ([x (cons 1 2)])
-#      (begin (set-cdr! x ())
-#             x)) => "(1)"]
-#   [(let ([x (cons 1 2)])
-#      (set-cdr! x ())
-#      x) => "(1)"]
-#   [(let ([x (cons 12 13)] [y (cons 14 15)])
-#      (set-cdr! x y)
-#      x) => "(12 14 . 15)"]
-#   [(let ([x (cons 12 13)] [y (cons 14 15)])
-#      (set-cdr! y x)
-#      y) => "(14 12 . 13)"]
-#   [(let ([x (cons 12 13)] [y (cons 14 15)])
-#      (set-cdr! y x)
-#      x) => "(12 . 13)"]
-#   [(let ([x (cons 12 13)] [y (cons 14 15)])
-#      (set-cdr! x y)
-#      y) => "(14 . 15)"]
-#   [(let ([x (let ([x (cons 1 2)]) (set-car! x #t) (set-cdr! x #f) x)])
-#      (cons x x)
-#      x) => "(#t . #f)"]
-#   [(let ([x (cons 1 2)])
-#      (set-cdr! x x)
-#      (set-car! (cdr x) x)
-#      (cons (eq? x (car x)) (eq? x (cdr x)))) => "(#t . #t)"]
-#  [(let ([x #f])
-#     (if (pair? x)
-#         (set-car! x 12)
-#         #f)
-#     x) => "#f"]
-# ;;; [(let ([x #f])
-# ;;;    (if (pair? #f)
-# ;;;        (set-car! #f 12)
-# ;;;        #f)
-# ;;;    x) => "#f"]
-# )
+("procedures",
+ (("(letrec () 12)", None, "12"),
+  ("(letrec () (let ([x 5]) (fx+ x x)))", None, "10"),
+  ("(letrec ([f (lambda () 5)]) 7)", None, "7"),
+  ("(letrec ([f (lambda () 5)]) (let ([x 12]) x))", None, "12"),
+  ("(letrec ([f (lambda () 5)]) (f))", None, "5"),
+  ("(letrec ([f (lambda () 5)]) (let ([x (f)]) x))", None, "5"),
+  ("(letrec ([f (lambda () 5)]) (fx+ (f) 6))", None, "11"),
+  ("(letrec ([f (lambda () 5)]) (fx- 20 (f)))", None, "15"),
+  ("(letrec ([f (lambda () 5)]) (fx+ (f) (f)))", None, "10"),
+  ("""(letrec ([f (lambda () (fx+ 5 7))]
+               [g (lambda () 13)])
+              (fx+ (f) (g)))""", None, "25"),
+  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f 13))", None, "25"),
+  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f (f 10)))", None, "34"),
+  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f (f (f 0))))", None, "36"),
+  ("""(letrec ([f (lambda (x y) (fx+ x y))]
+               [g (lambda (x) (fx+ x 12))])
+              (f 16 (f (g 0) (fx+ 1 (g 0)))))""", None, "41"),
+  ("""(letrec ([f (lambda (x) (g x x))]
+               [g (lambda (x y) (fx+ x y))])
+              (f 12))""", None, "24"),
+  ("""(letrec ([f (lambda (x)
+                   (if (fxzero? x)
+                       1
+                       (fx* x (f (fxsub1 x)))))])
+        (f 5))""", None, "120"),
+  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (o (fxsub1 x))))]
+               [o (lambda (x) (if (fxzero? x) #f (e (fxsub1 x))))])
+              (e 25))""", None, "#f"),
+  )),
 
 
-# (add-tests-with-string-output "vectors"
-#   [(vector? (make-vector 0)) => "#t"]
-#   [(vector-length (make-vector 12)) => "12"]
-#   [(vector? (cons 1 2)) => "#f"]
-#   [(vector? 1287) => "#f"]
-#   [(vector? ()) => "#f"]
-#   [(vector? #t) => "#f"]
-#   [(vector? #f) => "#f"]
-#   [(pair? (make-vector 12)) => "#f"]
-#   [(null? (make-vector 12)) => "#f"]
-#   [(boolean? (make-vector 12)) => "#f"]
-#   [(make-vector 0) => "#()"]
-#   [(let ([v (make-vector 2)])
-#      (vector-set! v 0 #t)
-#      (vector-set! v 1 #f)
-#      v) => "#(#t #f)"]
-#   [(let ([v (make-vector 2)])
-#      (vector-set! v 0 v)
-#      (vector-set! v 1 v)
-#      (eq? (vector-ref v 0) (vector-ref v 1))) => "#t"]
-#   [(let ([v (make-vector 1)] [y (cons 1 2)])
-#      (vector-set! v 0 y)
-#      (cons y (eq? y (vector-ref v 0)))) => "((1 . 2) . #t)"]
-#   [(let ([v0 (make-vector 2)])
-#      (let ([v1 (make-vector 2)])
-#        (vector-set! v0 0 100)
-#        (vector-set! v0 1 200)
-#        (vector-set! v1 0 300)
-#        (vector-set! v1 1 400)
-#        (cons v0 v1))) => "(#(100 200) . #(300 400))"]
-#   [(let ([v0 (make-vector 3)])
-#      (let ([v1 (make-vector 3)])
-#        (vector-set! v0 0 100)
-#        (vector-set! v0 1 200)
-#        (vector-set! v0 2 150)
-#        (vector-set! v1 0 300)
-#        (vector-set! v1 1 400)
-#        (vector-set! v1 2 350)
-#        (cons v0 v1))) => "(#(100 200 150) . #(300 400 350))"]
-#   [(let ([n 2])
-#     (let ([v0 (make-vector n)])
-#      (let ([v1 (make-vector n)])
-#        (vector-set! v0 0 100)
-#        (vector-set! v0 1 200)
-#        (vector-set! v1 0 300)
-#        (vector-set! v1 1 400)
-#        (cons v0 v1)))) => "(#(100 200) . #(300 400))"]
-#   [(let ([n 3])
-#     (let ([v0 (make-vector n)])
-#      (let ([v1 (make-vector (vector-length v0))])
-#        (vector-set! v0 (fx- (vector-length v0) 3) 100)
-#        (vector-set! v0 (fx- (vector-length v1) 2) 200)
-#        (vector-set! v0 (fx- (vector-length v0) 1) 150)
-#        (vector-set! v1 (fx- (vector-length v1) 3) 300)
-#        (vector-set! v1 (fx- (vector-length v0) 2) 400)
-#        (vector-set! v1 (fx- (vector-length v1) 1) 350)
-#        (cons v0 v1)))) => "(#(100 200 150) . #(300 400 350))"]
-#   [(let ([n 1])
-#      (vector-set! (make-vector n) (fxsub1 n) (fx* n n))
-#      n) => "1"]
-#   [(let ([n 1])
-#      (let ([v (make-vector 1)])
-#        (vector-set! v (fxsub1 n) n)
-#        (vector-ref v (fxsub1 n)))) => "1"]
-#  [(let ([v0 (make-vector 1)])
-#     (vector-set! v0 0 1)
-#     (let ([v1 (make-vector 1)])
-#       (vector-set! v1 0 13)
-#       (vector-set! (if (vector? v0) v0 v1)
-#            (fxsub1 (vector-length (if (vector? v0) v0 v1)))
-#            (fxadd1 (vector-ref
-#                       (if (vector? v0) v0 v1)
-#                       (fxsub1 (vector-length (if (vector? v0) v0 v1))))))
-#       (cons v0 v1))) => "(#(2) . #(13))"]
-# )
+("deeply nested procedures",
+ (("""(letrec ([sum (lambda (n ac)
+                   (if (fxzero? n)
+                        ac
+                        (app sum (fxsub1 n) (fx+ n ac))))])
+    (app sum 10000 0))""", None, "50005000"),
+  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (app o (fxsub1 x))))]
+            [o (lambda (x) (if (fxzero? x) #f (app e (fxsub1 x))))])
+     (app e 5000000))""", None, "#t"),
+  )),
 
 
-# (add-tests-with-string-output "strings"
-#   [(string? (make-string 0)) => "#t"]
-#   [(make-string 0) => "\"\""]
-#   [(let ([s (make-string 1)])
-#      (string-set! s 0 #\a)
-#      (string-ref s 0)) => "#\\a"]
+("begin/implicit-begin",
+ (("(begin 12)", None, "12"),
+  ("(begin 13 122)", None, "122"),
+  ("(begin 123 2343 #t)", None, "#t"),
+  ("(let ([t (begin 12 (cons 1 2))]) (begin t t))", None, "(1 . 2)"),
+  ("(let ([t (begin 13 (cons 1 2))]) (cons 1 t) t)", None, "(1 . 2)"),
+  ("(let ([t (cons 1 2)]) (if (pair? t) (begin t) 12))", None, "(1 . 2)"),
+  )),
 
-#   [(let ([s (make-string 2)])
-#      (string-set! s 0 #\a)
-#      (string-set! s 1 #\b)
-#      (cons (string-ref s 0) (string-ref s 1))) => "(#\\a . #\\b)"]
-#   [(let ([i 0])
-#     (let ([s (make-string 1)])
-#      (string-set! s i #\a)
-#      (string-ref s i))) => "#\\a"]
-#   [(let ([i 0] [j 1])
-#     (let ([s (make-string 2)])
-#      (string-set! s i #\a)
-#      (string-set! s j #\b)
-#      (cons (string-ref s i) (string-ref s j)))) => "(#\\a . #\\b)"]
-#   [(let ([i 0] [c #\a])
-#     (let ([s (make-string 1)])
-#      (string-set! s i c)
-#      (string-ref s i))) => "#\\a"]
-#   [(string-length (make-string 12)) => "12"]
-#   [(string? (make-vector 12)) => "#f"]
-#   [(string? (cons 1 2)) => "#f"]
-#   [(string? 1287) => "#f"]
-#   [(string? ()) => "#f"]
-#   [(string? #t) => "#f"]
-#   [(string? #f) => "#f"]
-#   [(pair? (make-string 12)) => "#f"]
-#   [(null? (make-string 12)) => "#f"]
-#   [(boolean? (make-string 12)) => "#f"]
-#   [(vector? (make-string 12)) => "#f"]
-#   [(make-string 0) => "\"\""]
-#   [(let ([v (make-string 2)])
-#      (string-set! v 0 #\t)
-#      (string-set! v 1 #\f)
-#      v) => "\"tf\""]
-#   [(let ([v (make-string 2)])
-#      (string-set! v 0 #\x)
-#      (string-set! v 1 #\x)
-#      (char= (string-ref v 0) (string-ref v 1))) => "#t"]
-#   [(let ([v0 (make-string 3)])
-#      (let ([v1 (make-string 3)])
-#        (string-set! v0 0 #\a)
-#        (string-set! v0 1 #\b)
-#        (string-set! v0 2 #\c)
-#        (string-set! v1 0 #\d)
-#        (string-set! v1 1 #\e)
-#        (string-set! v1 2 #\f)
-#        (cons v0 v1))) => "(\"abc\" . \"def\")"]
-#   [(let ([n 2])
-#     (let ([v0 (make-string n)])
-#      (let ([v1 (make-string n)])
-#        (string-set! v0 0 #\a)
-#        (string-set! v0 1 #\b)
-#        (string-set! v1 0 #\c)
-#        (string-set! v1 1 #\d)
-#        (cons v0 v1)))) => "(\"ab\" . \"cd\")"]
-#   [(let ([n 3])
-#     (let ([v0 (make-string n)])
-#      (let ([v1 (make-string (string-length v0))])
-#        (string-set! v0 (fx- (string-length v0) 3) #\a)
-#        (string-set! v0 (fx- (string-length v1) 2) #\b)
-#        (string-set! v0 (fx- (string-length v0) 1) #\c)
-#        (string-set! v1 (fx- (string-length v1) 3) #\Z)
-#        (string-set! v1 (fx- (string-length v0) 2) #\Y)
-#        (string-set! v1 (fx- (string-length v1) 1) #\X)
-#        (cons v0 v1)))) =>  "(\"abc\" . \"ZYX\")"]
-#   [(let ([n 1])
-#      (string-set! (make-string n) (fxsub1 n) (fixnum->char 34))
-#      n) => "1"]
-#   [(let ([n 1])
-#      (let ([v (make-string 1)])
-#        (string-set! v (fxsub1 n) (fixnum->char n))
-#        (char->fixnum (string-ref v (fxsub1 n))))) => "1"]
-#  [(let ([v0 (make-string 1)])
-#     (string-set! v0 0 #\a)
-#     (let ([v1 (make-string 1)])
-#       (string-set! v1 0 #\A)
-#       (string-set! (if (string? v0) v0 v1)
-#            (fxsub1 (string-length (if (string? v0) v0 v1)))
-#            (fixnum->char
-#              (fxadd1
-#                 (char->fixnum
-#                   (string-ref
-#                      (if (string? v0) v0 v1)
-#                      (fxsub1 (string-length (if (string? v0) v0 v1))))))))
-#       (cons v0 v1))) => "(\"b\" . \"A\")"]
-#  [(let ([s (make-string 1)])
-#      (string-set! s 0 #\")
-#      s) => "\"\\\"\""]
-#  [(let ([s (make-string 1)])
-#      (string-set! s 0 #\\)
-#      s) => "\"\\\\\""]
-# )
+("set-car! set-cdr!",
+ (("(let ([x (cons 1 2)]) (begin (set-cdr! x ()) x))", None, "(1)"),
+  ("(let ([x (cons 1 2)]) (set-cdr! x ()) x)", None, "(1)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! x y) x)", None, "(12 14 . 15)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! y x) y)", None, "(14 12 . 13)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! y x) x)", None, "(12 . 13)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! x y) y)", None, "(14 . 15)"),
+  ("(let ([x (let ([x (cons 1 2)]) (set-car! x #t) (set-cdr! x #f) x)]) (cons x x) x)", None, "(#t . #f)"),
+  ("(let ([x (cons 1 2)]) (set-cdr! x x) (set-car! (cdr x) x) (cons (eq? x (car x)) (eq? x (cdr x))))", None, "(#t . #t)"),
+  ("(let ([x #f]) (if (pair? x) (set-car! x 12) #f)q x)", None, "#f"),
+# ;;;; ("(let ([x #f]) (if (pair? #f) (set-car! #f 12) #f) x)", None, "#f"),
+  )),
+
+
+("vectors",
+ (("(vector? (make-vector 0))", None, "#t"),
+  ("(vector-length (make-vector 12))", None, "12"),
+  ("(vector? (cons 1 2))", None, "#f"),
+  ("(vector? 1287)", None, "#f"),
+  ("(vector? ())", None, "#f"),
+  ("(vector? #t)", None, "#f"),
+  ("(vector? #f)", None, "#f"),
+  ("(pair? (make-vector 12))", None, "#f"),
+  ("(null? (make-vector 12))", None, "#f"),
+  ("(boolean? (make-vector 12))", None, "#f"),
+  ("(make-vector 0)", None, "#()"),
+  ("""(let ([v (make-vector 2)])
+       (vector-set! v 0 #t)
+       (vector-set! v 1 #f)
+       v)""", None, "#(#t #f)"),
+  ("""(let ([v (make-vector 2)])
+       (vector-set! v 0 v)
+       (vector-set! v 1 v)
+       (eq? (vector-ref v 0) (vector-ref v 1)))""", None, "#t"),
+  ("""(let ([v (make-vector 1)] [y (cons 1 2)])
+       (vector-set! v 0 y)
+       (cons y (eq? y (vector-ref v 0))))""", None, "((1 . 2) . #t)"),
+  ("""(let ([v0 (make-vector 2)])
+       (let ([v1 (make-vector 2)])
+         (vector-set! v0 0 100)
+         (vector-set! v0 1 200)
+         (vector-set! v1 0 300)
+         (vector-set! v1 1 400)
+         (cons v0 v1)))""", None, "(#(100 200) . #(300 400))"),
+  ("""(let ([v0 (make-vector 3)])
+       (let ([v1 (make-vector 3)])
+         (vector-set! v0 0 100)
+         (vector-set! v0 1 200)
+         (vector-set! v0 2 150)
+         (vector-set! v1 0 300)
+         (vector-set! v1 1 400)
+         (vector-set! v1 2 350)
+         (cons v0 v1)))""", None, "(#(100 200 150) . #(300 400 350))"),
+  ("""(let ([n 2])
+    (let ([v0 (make-vector n)])
+       (let ([v1 (make-vector n)])
+         (vector-set! v0 0 100)
+         (vector-set! v0 1 200)
+         (vector-set! v1 0 300)
+         (vector-set! v1 1 400)
+         (cons v0 v1))))""", None, "(#(100 200) . #(300 400))"),
+  ("""(let ([n 3])
+    (let ([v0 (make-vector n)])
+       (let ([v1 (make-vector (vector-length v0))])
+         (vector-set! v0 (fx- (vector-length v0) 3) 100)
+         (vector-set! v0 (fx- (vector-length v1) 2) 200)
+         (vector-set! v0 (fx- (vector-length v0) 1) 150)
+         (vector-set! v1 (fx- (vector-length v1) 3) 300)
+         (vector-set! v1 (fx- (vector-length v0) 2) 400)
+         (vector-set! v1 (fx- (vector-length v1) 1) 350)
+         (cons v0 v1))))""", None, "(#(100 200 150) . #(300 400 350))"),
+  ("""(let ([n 1])
+       (vector-set! (make-vector n) (fxsub1 n) (fx* n n))
+       n)""", None, "1"),
+  ("""(let ([n 1])
+       (let ([v (make-vector 1)])
+         (vector-set! v (fxsub1 n) n)
+         (vector-ref v (fxsub1 n))))""", None, "1"),
+  ("""(let ([v0 (make-vector 1)])
+    (vector-set! v0 0 1)
+    (let ([v1 (make-vector 1)])
+        (vector-set! v1 0 13)
+        (vector-set! (if (vector? v0) v0 v1)
+             (fxsub1 (vector-length (if (vector? v0) v0 v1)))
+             (fxadd1 (vector-ref
+                        (if (vector? v0) v0 v1)
+                        (fxsub1 (vector-length (if (vector? v0) v0 v1))))))
+        (cons v0 v1)))""", None, "(#(2) . #(13))"),
+  )),
+
+
+("strings",
+ (("(string? (make-string 0))", None, "#t"),
+  ("(make-string 0)", None, '""'),
+  ("""(let ([s (make-string 1)])
+       (string-set! s 0 #\\a)
+       (string-ref s 0))""", None, "#\\a"),
+
+  ("""(let ([s (make-string 2)])
+       (string-set! s 0 #\\a)
+       (string-set! s 1 #\\b)
+       (cons (string-ref s 0) (string-ref s 1)))""", None, "(#\\a . #\\b)"),
+  ("""(let ([i 0])
+    (let ([s (make-string 1)])
+       (string-set! s i #\\a)
+       (string-ref s i)))""", None, "#\\a"),
+  ("""(let ([i 0] [j 1])
+    (let ([s (make-string 2)])
+       (string-set! s i #\\a)
+       (string-set! s j #\\b)
+       (cons (string-ref s i) (string-ref s j))))""", None, "(#\\a . #\\b)"),
+  ("""(let ([i 0] [c #\\a])
+    (let ([s (make-string 1)])
+       (string-set! s i c)
+       (string-ref s i)))""", None, "#\\a"),
+  ("(string-length (make-string 12))", None, "12"),
+  ("(string? (make-vector 12))", None, "#f"),
+  ("(string? (cons 1 2))", None, "#f"),
+  ("(string? 1287)", None, "#f"),
+  ("(string? ())", None, "#f"),
+  ("(string? #t)", None, "#f"),
+  ("(string? #f)", None, "#f"),
+  ("(pair? (make-string 12))", None, "#f"),
+  ("(null? (make-string 12))", None, "#f"),
+  ("(boolean? (make-string 12))", None, "#f"),
+  ("(vector? (make-string 12))", None, "#f"),
+  ("(make-string 0)", None, '""'),
+  ("""(let ([v (make-string 2)])
+       (string-set! v 0 #\\t)
+       (string-set! v 1 #\\f)
+       v)""", None, "\"tf\""),
+  ("""(let ([v (make-string 2)])
+       (string-set! v 0 #\\x)
+       (string-set! v 1 #\\x)
+       (char= (string-ref v 0) (string-ref v 1)))""", None, "#t"),
+  ("""(let ([v0 (make-string 3)])
+       (let ([v1 (make-string 3)])
+         (string-set! v0 0 #\\a)
+         (string-set! v0 1 #\\b)
+         (string-set! v0 2 #\\c)
+         (string-set! v1 0 #\\d)
+         (string-set! v1 1 #\\e)
+         (string-set! v1 2 #\\f)
+         (cons v0 v1)))""", None, "(\"abc\" . \"def\")"),
+  ("""(let ([n 2])
+    (let ([v0 (make-string n)])
+       (let ([v1 (make-string n)])
+         (string-set! v0 0 #\\a)
+         (string-set! v0 1 #\\b)
+         (string-set! v1 0 #\\c)
+         (string-set! v1 1 #\\d)
+         (cons v0 v1))))""", None, "(\"ab\" . \"cd\")"),
+  ("""(let ([n 3])
+    (let ([v0 (make-string n)])
+       (let ([v1 (make-string (string-length v0))])
+         (string-set! v0 (fx- (string-length v0) 3) #\\a)
+         (string-set! v0 (fx- (string-length v1) 2) #\\b)
+         (string-set! v0 (fx- (string-length v0) 1) #\\c)
+         (string-set! v1 (fx- (string-length v1) 3) #\\Z)
+         (string-set! v1 (fx- (string-length v0) 2) #\\Y)
+         (string-set! v1 (fx- (string-length v1) 1) #\\X)
+         (cons v0 v1))))""", None,  "(\"abc\" . \"ZYX\")"),
+  ("""(let ([n 1])
+       (string-set! (make-string n) (fxsub1 n) (fixnum->char 34))
+       n)""", None, "1"),
+  ("""(let ([n 1])
+       (let ([v (make-string 1)])
+         (string-set! v (fxsub1 n) (fixnum->char n))
+         (char->fixnum (string-ref v (fxsub1 n)))))""", None, "1"),
+  ("""(let ([v0 (make-string 1)])
+     (string-set! v0 0 #\\a)
+     (let ([v1 (make-string 1)])
+         (string-set! v1 0 #\\A)
+         (string-set! (if (string? v0) v0 v1)
+              (fxsub1 (string-length (if (string? v0) v0 v1)))
+              (fixnum->char
+                (fxadd1
+                   (char->fixnum
+                     (string-ref
+                        (if (string? v0) v0 v1)
+                        (fxsub1 (string-length (if (string? v0) v0 v1))))))))
+         (cons v0 v1)))""", None, "(\"b\" . \"A\")"),
+  ("(let ([s (make-string 1)]) (string-set! s 0 #\\\") s)", None, '"\\""'),
+  ("(let ([s (make-string 1)]) (string-set! s 0 #\\\\) s)", None, '"\\\\"'),
+  )),
+
+
+
+
 # ;;; one possible implementation strategy for procedures is via closure
 # ;;; conversion.
-
+# ;;;
 # ;;; Lambda does many things at the same time:
 # ;;; 1) It creates a procedure object (ie. one that passes procedure?)
 # ;;; 2) It contains both code (what to do when applied) and data (what
 # ;;;    variables it references.
 # ;;; 3) The procedure object, in addition to passing procedure?, can be
 # ;;;    applied to arguments.
-
+# ;;;
 # ;;; First step: separate code from data:
 # ;;; convert every program containing lambda to a program containing
 # ;;; codes and closures:
@@ -866,22 +832,22 @@ TESTS = [
 # ;;; is of the form (code (formals ...) (free-vars ...) body)
 # ;;;
 # ;;; sexpr
-# ;;; => recordize
+# ;;;, None, recordize
 # ;;; recognize lambda forms and applications
 # ;;; =>
 # ;;; (let ([y 12])
 # ;;;   (let ([f (lambda (x) (fx+ y x))])
 # ;;;     (fx+ (f 10) (f 0))))
-# ;;; => convert closures
+# ;;;, None, convert closures
 # ;;; (let ([y 12])
 # ;;;   (let ([f (closure (code (x) (y) (fx+ x y)) y)])
 # ;;;     (fx+ (call f 10) (call f 0))
-# ;;; => lift codes
+# ;;;, None, lift codes
 # ;;; (codes ([code0 (code (x) (y) (fx+ x y))])
 # ;;;   (let ([y 12])
 # ;;;     (let ([f (closure code0 y)])
 # ;;;       (fx+ (call f 10) (call f 0)))))
-# ;;; => code generation
+# ;;;, None, code generation
 # ;;; 1) codes form generates unique-labels for every code and
 # ;;;    binds the names of the code to these labels.
 # ;;; 2) Every code object has a list of formals and a list of free vars.
@@ -906,579 +872,457 @@ TESTS = [
 # ;;;    g) The value of the closure pointer is restored.
 # ;;;    The returned value is still in %eax.
 
-# (add-tests-with-string-output "procedure?"
-#   [(procedure? (lambda (x) x)) => "#t"]
-#   [(let ([f (lambda (x) x)]) (procedure? f)) => "#t"]
-#   [(procedure? (make-vector 0)) => "#f"]
-#   [(procedure? (make-string 0)) => "#f"]
-#   [(procedure? (cons 1 2)) => "#f"]
-#   [(procedure? #\S) => "#f"]
-#   [(procedure? ()) => "#f"]
-#   [(procedure? #t) => "#f"]
-#   [(procedure? #f) => "#f"]
-#   [(string? (lambda (x) x)) => "#f"]
-#   [(vector? (lambda (x) x)) => "#f"]
-#   [(boolean? (lambda (x) x)) => "#f"]
-#   [(null? (lambda (x) x)) => "#f"]
-#   [(not (lambda (x) x)) => "#f"]
-# )
+("procedure?",
+ (("(procedure? (lambda (x) x))", None, "#t"),
+  ("(let ([f (lambda (x) x)]) (procedure? f))", None, "#t"),
+  ("(procedure? (make-vector 0))", None, "#f"),
+  ("(procedure? (make-string 0))", None, "#f"),
+  ("(procedure? (cons 1 2))", None, "#f"),
+  ("(procedure? #\S)", None, "#f"),
+  ("(procedure? ())", None, "#f"),
+  ("(procedure? #t)", None, "#f"),
+  ("(procedure? #f)", None, "#f"),
+  ("(string? (lambda (x) x))", None, "#f"),
+  ("(vector? (lambda (x) x))", None, "#f"),
+  ("(boolean? (lambda (x) x))", None, "#f"),
+  ("(null? (lambda (x) x))", None, "#f"),
+  ("(not (lambda (x) x))", None, "#f"),
+  )),
 
 
-# (add-tests-with-string-output "applying thunks"
-#   [(let ([f (lambda () 12)]) (f)) => "12"]
-#   [(let ([f (lambda () (fx+ 12 13))]) (f)) => "25"]
-#   [(let ([f (lambda () 13)]) (fx+ (f) (f))) => "26"]
-#   [(let ([f (lambda ()
-#               (let ([g (lambda () (fx+ 2 3))])
-#                 (fx* (g) (g))))])
-#     (fx+ (f) (f))) => "50"]
-#   [(let ([f (lambda ()
-#               (let ([f (lambda () (fx+ 2 3))])
-#                 (fx* (f) (f))))])
-#     (fx+ (f) (f))) => "50"]
-#   [(let ([f (if (boolean? (lambda () 12))
-#                 (lambda () 13)
-#                 (lambda () 14))])
-#      (f)) => "14"]
-# )
+("applying thunks",
+ (("(let ([f (lambda () 12)]) (f))", None, "12"),
+  ("(let ([f (lambda () (fx+ 12 13))]) (f))", None, "25"),
+  ("(let ([f (lambda () 13)]) (fx+ (f) (f)))", None, "26"),
+  ("""(let ([f (lambda ()
+              (let ([g (lambda () (fx+ 2 3))])
+                (fx* (g) (g))))])
+    (fx+ (f) (f)))""", None, "50"),
+  ("""(let ([f (lambda ()
+              (let ([f (lambda () (fx+ 2 3))])
+                (fx* (f) (f))))])
+    (fx+ (f) (f)))""", None, "50"),
+  ("""(let ([f (if (boolean? (lambda () 12))
+                (lambda () 13)
+                (lambda () 14))])
+     (f))""", None, "14"),
+  )),
 
 
-# (add-tests-with-string-output "parameter passing"
-#  [(let ([f (lambda (x) x)]) (f 12)) => "12"]
-#  [(let ([f (lambda (x y) (fx+ x y))]) (f 12 13)) => "25"]
-#  [(let ([f (lambda (x)
-#              (let ([g (lambda (x y) (fx+ x y))])
-#                (g x 100)))])
-#    (f 1000)) => "1100"]
-#  [(let ([f (lambda (g) (g 2 13))])
-#     (f (lambda (n m) (fx* n m)))) => "26"]
-#  [(let ([f (lambda (g) (fx+ (g 10) (g 100)))])
-#    (f (lambda (x) (fx* x x)))) => "10100"]
-#  [(let ([f (lambda (f n m)
-#              (if (fxzero? n)
-#                  m
-#                  (f f (fxsub1 n) (fx* n m))))])
-#    (f f 5 1)) => "120"]
-#  [(let ([f (lambda (f n)
-#              (if (fxzero? n)
-#                  1
-#                  (fx* n (f f (fxsub1 n)))))])
-#    (f f 5)) => "120"]
-# )
+("parameter passing",
+ (("(let ([f (lambda (x) x)]) (f 12))", None, "12"),
+  ("(let ([f (lambda (x y) (fx+ x y))]) (f 12 13))", None, "25"),
+  ("""(let ([f (lambda (x)
+              (let ([g (lambda (x y) (fx+ x y))])
+                (g x 100)))])
+    (f 1000))""", None, "1100"),
+  ("""(let ([f (lambda (g) (g 2 13))])
+     (f (lambda (n m) (fx* n m))))""", None, "26"),
+  ("""(let ([f (lambda (g) (fx+ (g 10) (g 100)))])
+    (f (lambda (x) (fx* x x))))""", None, "10100"),
+  ("""(let ([f (lambda (f n m)
+              (if (fxzero? n)
+                  m
+                  (f f (fxsub1 n) (fx* n m))))])
+    (f f 5 1))""", None, "120"),
+  ("""(let ([f (lambda (f n)
+              (if (fxzero? n)
+                  1
+                  (fx* n (f f (fxsub1 n)))))])
+    (f f 5))""", None, "120"),
+  )),
+
+("closures",
+ (("""(let ([n 12])
+     (let ([f (lambda () n)])
+       (f)))""", None, "12"),
+  ("""(let ([n 12])
+     (let ([f (lambda (m) (fx+ n m))])
+       (f 100)))""", None, "112"),
+  ("""(let ([f (lambda (f n m)
+              (if (fxzero? n)
+                  m
+                  (f (fxsub1 n) (fx* n m))))])
+    (let ([g (lambda (g n m) (f (lambda (n m) (g g n m)) n m))])
+      (g g 5 1)))""", None, "120"),
+  ("""(let ([f (lambda (f n)
+              (if (fxzero? n)
+                  1
+                  (fx* n (f (fxsub1 n)))))])
+    (let ([g (lambda (g n) (f (lambda (n) (g g n)) n))])
+      (g g 5)))""", None, "120"),
+  )),
+
+("set!",
+ (("""(let ([x 12])
+     (set! x 13)
+     x)""", None, "13"),
+  ("""(let ([x 12])
+     (set! x (fxadd1 x))
+     x)""", None, "13"),
+  ("""(let ([x 12])
+     (let ([x #f]) (set! x 14))
+     x)""", None, "12"),
+  ("""(let ([x 12])
+     (let ([y (let ([x #f]) (set! x 14))])
+       x))""", None, "12"),
+  ("""(let ([f #f])
+     (let ([g (lambda () f)])
+       (set! f 10)
+       (g)))""", None, "10"),
+  ("""(let ([f (lambda (x)
+              (set! x (fxadd1 x))
+              x)])
+     (f 12))""", None, "13"),
+  ("""(let ([x 10])
+     (let ([f (lambda (x)
+                (set! x (fxadd1 x))
+                x)])
+       (cons x (f x))))""", None, "(10 . 11)"),
+  ("""(let ([t #f])
+     (let ([locative
+          (cons
+             (lambda () t)
+             (lambda (n) (set! t n)))])
+       ((cdr locative) 17)
+       ((car locative))))""", None, "17"),
+  ("""(let ([locative
+          (let ([t #f])
+            (cons
+              (lambda () t)
+              (lambda (n) (set! t n))))])
+      ((cdr locative) 17)
+      ((car locative)))""", None, "17"),
+  ("""(let ([make-counter
+          (lambda ()
+            (let ([counter -1])
+              (lambda ()
+                (set! counter (fxadd1 counter))
+                counter)))])
+     (let ([c0 (make-counter)]
+           [c1 (make-counter)])
+       (c0)
+       (cons (c0) (c1))))""", None, "(1 . 0)"),
+  ("""(let ([fact #f])
+     (set! fact (lambda (n)
+                  (if (fxzero? n)
+                      1
+                      (fx* n (fact (fxsub1 n))))))
+     (fact 5))""", None, "120"),
+  ("""(let ([fact #f])
+     ((begin
+         (set! fact (lambda (n)
+                      (if (fxzero? n)
+                          1
+                          (fx* n (fact (fxsub1 n))))))
+         fact)
+      5))""", None, "120"),
+  )),
+
+("complex constants",
+ (("'42", None, "42"),
+  ("'(1 . 2)", None, "(1 . 2)"),
+  ("'(1 2 3)", None, "(1 2 3)"),
+  ("(let ([x '(1 2 3)]) x)", None, "(1 2 3)"),
+  ("(let ([f (lambda () '(1 2 3))]) (f))", None, "(1 2 3)"),
+  ("(let ([f (lambda () '(1 2 3))]) (eq? (f) (f)))", None, "#t"),
+  ("(let ([f (lambda () (lambda () '(1 2 3)))]) ((f)))", None, "(1 2 3)"),
+  ("(let ([x '#(1 2 3)]) (cons x (vector-ref x 0)))", None, "(#(1 2 3) . 1)"),
+  ('"Hello World"', None, '"Hello World"'),
+  ("'(\"Hello\" \"World\")", None, '("Hello" "World")'),
+  )),
+
+("letrec",
+ (("(letrec () 12)", None, "12"),
+  ("(letrec ([f 12]) f)", None, "12"),
+  ("(letrec ([f 12] [g 13]) (fx+ f g))", None, "25"),
+  ("""(letrec ([fact
+               (lambda (n)
+                 (if (fxzero? n)
+                     1
+                     (fx* n (fact (fxsub1 n)))))])
+      (fact 5))""", None, "120"),
+  ("(letrec ([f 12] [g (lambda () f)]) (g))", None, "12"),
+  ("(letrec ([f 12] [g (lambda (n) (set! f n))]) (g 130) f)", None, "130"),
+  ("(letrec ([f (lambda (g) (set! f g) (f))]) (f (lambda () 12)))", None, "12"),
+  ("""(letrec ([f (cons (lambda () f)
+                        (lambda (x) (set! f x)))])
+      (let ([g (car f)])
+        ((cdr f) 100)
+        (g)))""", None, "100"),
+  ("(letrec ([f (letrec ([g (lambda (x) (fx* x 2))]) (lambda (n) (g (fx* n 2))))]) (f 12))", None, "48"),
+  ("""(letrec ([f (lambda (f n)
+                    (if (fxzero? n)
+                        1
+                        (fx* n (f f (fxsub1 n)))))])
+        (f f 5))""", None, "120"),
+  ("""(let ([f (lambda (f)
+                (lambda (n)
+                   (if (fxzero? n)
+                       1
+                       (fx* n (f (fxsub1 n))))))])
+       (letrec ([fix
+                 (lambda (f)
+                   (f (lambda (n) ((fix f) n))))])
+        ((fix f) 5)))""", None, "120"),
+  )),
+
+("letrec*",
+ (("(letrec* () 12)", None, "12"),
+  ("(letrec* ([f 12]) f)", None, "12"),
+  ("(letrec* ([f 12] [g 13]) (fx+ f g))", None, "25"),
+  ("""(letrec* ([fact
+               (lambda (n)
+                 (if (fxzero? n)
+                     1
+                     (fx* n (fact (fxsub1 n)))))])
+      (fact 5))""", None, "120"),
+  ("(letrec* ([f 12] [g (lambda () f)]) (g))", None, "12"),
+  ("(letrec* ([f 12] [g (lambda (n) (set! f n))]) (g 130) f)", None, "130"),
+  ("(letrec* ([f (lambda (g) (set! f g) (f))]) (f (lambda () 12)))", None, "12"),
+  ("""(letrec* ([f (cons (lambda () f)
+                        (lambda (x) (set! f x)))])
+      (let ([g (car f)])
+        ((cdr f) 100)
+        (g)))""", None, "100"),
+  ("(letrec* ([f (letrec* ([g (lambda (x) (fx* x 2))]) (lambda (n) (g (fx* n 2))))]) (f 12))", None, "48"),
+  ("""(letrec* ([f (lambda (f n)
+                     (if (fxzero? n)
+                         1
+                         (fx* n (f f (fxsub1 n)))))])
+        (f f 5))""", None, "120"),
+  ("""(let ([f (lambda (f)
+                (lambda (n)
+                   (if (fxzero? n)
+                       1
+                       (fx* n (f (fxsub1 n))))))])
+       (letrec* ([fix
+                  (lambda (f)
+                    (f (lambda (n) ((fix f) n))))])
+        ((fix f) 5)))""", None, "120"),
+  ("(letrec* ([a 12] [b (fx+ a 5)] [c (fx+ b a)]) c)", None, "29"),
+  )),
 
 
-# (add-tests-with-string-output "closures"
-#  [(let ([n 12])
-#     (let ([f (lambda () n)])
-#       (f))) => "12"]
-#  [(let ([n 12])
-#     (let ([f (lambda (m) (fx+ n m))])
-#       (f 100))) => "112"]
-#  [(let ([f (lambda (f n m)
-#              (if (fxzero? n)
-#                  m
-#                  (f (fxsub1 n) (fx* n m))))])
-#    (let ([g (lambda (g n m) (f (lambda (n m) (g g n m)) n m))])
-#      (g g 5 1))) => "120"]
-#  [(let ([f (lambda (f n)
-#              (if (fxzero? n)
-#                  1
-#                  (fx* n (f (fxsub1 n)))))])
-#    (let ([g (lambda (g n) (f (lambda (n) (g g n)) n))])
-#      (g g 5))) => "120"]
-# )
-
-# (add-tests-with-string-output "set!"
-#   [(let ([x 12])
-#      (set! x 13)
-#      x) => "13"]
-#   [(let ([x 12])
-#      (set! x (fxadd1 x))
-#      x) => "13"]
-#   [(let ([x 12])
-#      (let ([x #f]) (set! x 14))
-#      x) => "12"]
-#   [(let ([x 12])
-#      (let ([y (let ([x #f]) (set! x 14))])
-#        x)) => "12"]
-#   [(let ([f #f])
-#      (let ([g (lambda () f)])
-#        (set! f 10)
-#        (g))) => "10"]
-#   [(let ([f (lambda (x)
-#               (set! x (fxadd1 x))
-#               x)])
-#      (f 12)) => "13"]
-#   [(let ([x 10])
-#      (let ([f (lambda (x)
-#                 (set! x (fxadd1 x))
-#                 x)])
-#        (cons x (f x)))) => "(10 . 11)"]
-#   [(let ([t #f])
-#      (let ([locative
-#           (cons
-#              (lambda () t)
-#              (lambda (n) (set! t n)))])
-#        ((cdr locative) 17)
-#        ((car locative)))) => "17"]
-#   [(let ([locative
-#           (let ([t #f])
-#             (cons
-#               (lambda () t)
-#               (lambda (n) (set! t n))))])
-#       ((cdr locative) 17)
-#       ((car locative))) => "17"]
-#   [(let ([make-counter
-#           (lambda ()
-#             (let ([counter -1])
-#               (lambda ()
-#                 (set! counter (fxadd1 counter))
-#                 counter)))])
-#      (let ([c0 (make-counter)]
-#            [c1 (make-counter)])
-#        (c0)
-#        (cons (c0) (c1)))) => "(1 . 0)"]
-#   [(let ([fact #f])
-#      (set! fact (lambda (n)
-#                   (if (fxzero? n)
-#                       1
-#                       (fx* n (fact (fxsub1 n))))))
-#      (fact 5)) => "120"]
-#   [(let ([fact #f])
-#      ((begin
-#          (set! fact (lambda (n)
-#                       (if (fxzero? n)
-#                           1
-#                           (fx* n (fact (fxsub1 n))))))
-#          fact)
-#       5)) => "120"]
-
-# )
+("and/or",
+ (("(and)", None, "#t"),
+  ("(and 5)", None, "5"),
+  ("(and #f)", None, "#f"),
+  ("(and 5 6)", None, "6"),
+  ("(and #f ((lambda (x) (x x)) (lambda (x) (x x))))", None, "#f"),
+  ("(or)", None, "#f"),
+  ("(or #t)", None, "#t"),
+  ("(or 5)", None, "5"),
+  ("(or 1 2 3)", None, "1"),
+  ("(or (cons 1 2) ((lambda (x) (x x)) (lambda (x) (x x))))", None, "(1 . 2)"),
+  ("(let ([if 12]) (or if 17))", None, "12"),
+  ("(let ([if 12]) (and if 17))", None, "17"),
+  ("(let ([let 8]) (or let 18))", None, "8"),
+  ("(let ([let 8]) (and let 18))", None, "18"),
+  ("(let ([t 1]) (and (begin (set! t (fxadd1 t)) t) t))", None, "2"),
+  ("(let ([t 1]) (or (begin (set! t (fxadd1 t)) t) t))", None, "2"),
+  )),
 
 
-# (add-tests-with-string-output "complex constants"
-#  ['42 => "42"]
-#  ['(1 . 2) => "(1 . 2)"]
-#  ['(1 2 3) => "(1 2 3)"]
-#  [(let ([x '(1 2 3)]) x) => "(1 2 3)"]
-#  [(let ([f (lambda () '(1 2 3))])
-#    (f)) => "(1 2 3)"]
-#  [(let ([f (lambda () '(1 2 3))])
-#    (eq? (f) (f))) => "#t"]
-#  [(let ([f (lambda ()
-#              (lambda ()
-#                '(1 2 3)))])
-#    ((f))) => "(1 2 3)"]
-#  [(let ([x '#(1 2 3)])
-#     (cons x (vector-ref x 0))) => "(#(1 2 3) . 1)"]
-#  ["Hello World" => "\"Hello World\""]
-#  ['("Hello" "World") => "(\"Hello\" \"World\")"]
-# )
+("when/unless",
+ (("""(let ([x (cons 1 2)])
+       (when (pair? x)
+         (set-car! x (fx+ (car x) (cdr x))))
+       x)""", None, "(3 . 2)"),
+  ("""(let ([x (cons 1 2)])
+       (when (pair? x)
+         (set-car! x (fx+ (car x) (cdr x)))
+         (set-car! x (fx+ (car x) (cdr x))))
+       x)""", None, "(5 . 2)"),
+  ("""(let ([x (cons 1 2)])
+       (unless (fixnum? x)
+         (set-car! x (fx+ (car x) (cdr x))))
+       x)""", None, "(3 . 2)"),
+  ("""(let ([x (cons 1 2)])
+       (unless (fixnum? x)
+         (set-car! x (fx+ (car x) (cdr x)))
+         (set-car! x (fx+ (car x) (cdr x))))
+       x)""", None, "(5 . 2)"),
+  ("(let ([let 12]) (when let let let let let))", None, "12"),
+  ("(let ([let #f]) (unless let let let let let))", None, "#f"),
+  )),
 
 
-# (add-tests-with-string-output "letrec"
-#   [(letrec () 12) => "12"]
-#   [(letrec ([f 12]) f) => "12"]
-#   [(letrec ([f 12] [g 13]) (fx+ f g)) => "25"]
-#   [(letrec ([fact
-#              (lambda (n)
-#                (if (fxzero? n)
-#                    1
-#                    (fx* n (fact (fxsub1 n)))))])
-#     (fact 5)) => "120"]
-#   [(letrec ([f 12] [g (lambda () f)])
-#      (g)) => "12"]
-#   [(letrec ([f 12] [g (lambda (n) (set! f n))])
-#     (g 130)
-#     f) => "130"]
-#   [(letrec ([f (lambda (g) (set! f g) (f))])
-#      (f (lambda () 12))) => "12"]
-#   [(letrec ([f (cons (lambda () f)
-#                      (lambda (x) (set! f x)))])
-#     (let ([g (car f)])
-#       ((cdr f) 100)
-#       (g))) => "100"]
-#   [(letrec ([f (letrec ([g (lambda (x) (fx* x 2))])
-#                   (lambda (n) (g (fx* n 2))))])
-#       (f 12)) => "48"]
-#   [(letrec ([f (lambda (f n)
-#                   (if (fxzero? n)
-#                       1
-#                       (fx* n (f f (fxsub1 n)))))])
-#       (f f 5)) => "120"]
-#   [(let ([f (lambda (f)
-#               (lambda (n)
-#                  (if (fxzero? n)
-#                      1
-#                      (fx* n (f (fxsub1 n))))))])
-#      (letrec ([fix
-#                (lambda (f)
-#                  (f (lambda (n) ((fix f) n))))])
-#       ((fix f) 5))) => "120"]
-# )
-
-# (add-tests-with-string-output "letrec*"
-#   [(letrec* () 12) => "12"]
-#   [(letrec* ([f 12]) f) => "12"]
-#   [(letrec* ([f 12] [g 13]) (fx+ f g)) => "25"]
-#   [(letrec* ([fact
-#              (lambda (n)
-#                (if (fxzero? n)
-#                    1
-#                    (fx* n (fact (fxsub1 n)))))])
-#     (fact 5)) => "120"]
-#   [(letrec* ([f 12] [g (lambda () f)])
-#      (g)) => "12"]
-#   [(letrec* ([f 12] [g (lambda (n) (set! f n))])
-#     (g 130)
-#     f) => "130"]
-#   [(letrec* ([f (lambda (g) (set! f g) (f))])
-#      (f (lambda () 12))) => "12"]
-#   [(letrec* ([f (cons (lambda () f)
-#                       (lambda (x) (set! f x)))])
-#     (let ([g (car f)])
-#       ((cdr f) 100)
-#       (g))) => "100"]
-#   [(letrec* ([f (letrec* ([g (lambda (x) (fx* x 2))])
-#                    (lambda (n) (g (fx* n 2))))])
-#       (f 12)) => "48"]
-#   [(letrec* ([f (lambda (f n)
-#                    (if (fxzero? n)
-#                        1
-#                        (fx* n (f f (fxsub1 n)))))])
-#       (f f 5)) => "120"]
-#   [(let ([f (lambda (f)
-#               (lambda (n)
-#                  (if (fxzero? n)
-#                      1
-#                      (fx* n (f (fxsub1 n))))))])
-#      (letrec* ([fix
-#                 (lambda (f)
-#                   (f (lambda (n) ((fix f) n))))])
-#       ((fix f) 5))) => "120"]
-#   [(letrec* ([a 12] [b (fx+ a 5)] [c (fx+ b a)])
-#       c) => "29"]
-# )
-
-
-# (add-tests-with-string-output "and/or"
-#   [(and) => "#t"]
-#   [(and 5) => "5"]
-#   [(and #f) => "#f"]
-#   [(and 5 6) => "6"]
-#   [(and #f ((lambda (x) (x x)) (lambda (x) (x x)))) => "#f"]
-#   [(or) => "#f"]
-#   [(or #t) => "#t"]
-#   [(or 5) => "5"]
-#   [(or 1 2 3) => "1"]
-#   [(or (cons 1 2) ((lambda (x) (x x)) (lambda (x) (x x)))) => "(1 . 2)"]
-#   [(let ([if 12]) (or if 17)) => "12"]
-#   [(let ([if 12]) (and if 17)) => "17"]
-#   [(let ([let 8]) (or let 18)) => "8"]
-#   [(let ([let 8]) (and let 18)) => "18"]
-#   [(let ([t 1])
-#      (and (begin (set! t (fxadd1 t)) t) t)) => "2"]
-#   [(let ([t 1])
-#      (or (begin (set! t (fxadd1 t)) t) t)) => "2"]
-# )
-
-
-# (add-tests-with-string-output "when/unless"
-#   [(let ([x (cons 1 2)])
-#      (when (pair? x)
-#        (set-car! x (fx+ (car x) (cdr x))))
-#      x) => "(3 . 2)"]
-#   [(let ([x (cons 1 2)])
-#      (when (pair? x)
-#        (set-car! x (fx+ (car x) (cdr x)))
-#        (set-car! x (fx+ (car x) (cdr x))))
-#      x) => "(5 . 2)"]
-#   [(let ([x (cons 1 2)])
-#      (unless (fixnum? x)
-#        (set-car! x (fx+ (car x) (cdr x))))
-#      x) => "(3 . 2)"]
-#   [(let ([x (cons 1 2)])
-#      (unless (fixnum? x)
-#        (set-car! x (fx+ (car x) (cdr x)))
-#        (set-car! x (fx+ (car x) (cdr x))))
-#      x) => "(5 . 2)"]
-#   [(let ([let 12])
-#      (when let let let let let)) => "12"]
-#   [(let ([let #f])
-#      (unless let let let let let)) => "#f"]
-#   )
-
-
-# (add-tests-with-string-output "cond"
-#   [(cond [1 2] [else 3]) => "2"]
-#   [(cond [1] [else 13]) => "1"]
-#   [(cond [#f #t] [#t #f]) => "#f"]
-#   [(cond [else 17]) => "17"]
-#   [(cond [#f] [#f 12] [12 13]) => "13"]
-#   [(cond [(cons 1 2) => (lambda (x) (cdr x))]) => "2"]
-#   [(let ([else #t])
-#      (cond
-#       [else 1287])) => "1287"]
-#   [(let ([else 17])
-#      (cond
-#       [else])) => "17"]
-#   [(let ([else 17])
-#      (cond
-#       [else => (lambda (x) x)])) => "17"]
-#   [(let ([else #f])
-#      (cond
-#        [else ((lambda (x) (x x)) (lambda (x) (x x)))])
-#      else) => "#f"]
-#   [(let ([=> 12])
-#     (cond
-#      [12 => 14]
-#      [else 17])) => "14"]
-#   [(let ([=> 12])
-#     (cond
-#       [=>])) => "12"]
-#   [(let ([=> 12])
-#     (cond
-#       [=> =>])) => "12"]
-#   [(let ([=> 12])
-#     (cond
-#       [=> => =>])) => "12"]
-#   [(let ([let 12])
-#     (cond
-#       [let => (lambda (x) (fx+ let x))]
-#       [else 14])) => "24"]
-# )
+("cond",
+ (("(cond [1 2] [else 3])", None, "2"),
+  ("(cond [1] [else 13])", None, "1"),
+  ("(cond [#f #t] [#t #f])", None, "#f"),
+  ("(cond [else 17])", None, "17"),
+  ("(cond [#f] [#f 12] [12 13])", None, "13"),
+  ("(cond [(cons 1 2), None, (lambda (x) (cdr x))])", None, "2"),
+  ("(let ([else #t]) (cond [else 1287]))", None, "1287"),
+  ("(let ([else 17]) (cond [else]))", None, "17"),
+  ("(let ([else 17]) (cond [else, None, (lambda (x) x)]))", None, "17"),
+  ("(let ([else #f]) (cond [else ((lambda (x) (x x)) (lambda (x) (x x)))]) else)", None, "#f"),
+  ("(let ([=> 12]) (cond [12, None, 14] [else 17]))", None, "14"),
+  ("(let ([=> 12]) (cond [=>]))", None, "12"),
+  ("(let ([=> 12]) (cond [=> =>]))", None, "12"),
+  ("(let ([=> 12]) (cond [=>, None, =>]))", None, "12"),
+  ("(let ([let 12]) (cond [let, None, (lambda (x) (fx+ let x))] [else 14]))", None, "24"),
+  )),
 
 # ; vararg tests
 
-
-# (add-tests-with-string-output "vararg not using rest argument"
-#   [(let ([f (lambda args 12)])
-#     (f)) => "12"]
-#   [(let ([f (lambda args 12)])
-#     (f 10)) => "12"]
-#   [(let ([f (lambda args 12)])
-#     (f 10 20)) => "12"]
-#   [(let ([f (lambda args 12)])
-#     (f 10 20 30)) => "12"]
-#   [(let ([f (lambda args 12)])
-#     (f 10 20 30 40)) => "12"]
-#   [(let ([f (lambda args 12)])
-#     (f 10 20 30 40 50)) => "12"]
-#   [(let ([f (lambda args 12)])
-#     (f 10 20 30 40 50 60 70 80 90)) => "12"]
-#   [(let ([f (lambda (a0 . args) 12)])
-#     (f 10)) => "12"]
-#   [(let ([f (lambda (a0 . args) a0)])
-#     (f 10)) => "10"]
-#   [(let ([f (lambda (a0 . args) 12)])
-#     (f 10 20)) => "12"]
-#   [(let ([f (lambda (a0 . args) a0)])
-#     (f 10 20)) => "10"]
-#   [(let ([f (lambda (a0 . args) 12)])
-#     (f 10 20 30)) => "12"]
-#   [(let ([f (lambda (a0 . args) a0)])
-#     (f 10 20 30)) => "10"]
-#   [(let ([f (lambda (a0 . args) 12)])
-#     (f 10 20 30 40)) => "12"]
-#   [(let ([f (lambda (a0 . args) a0)])
-#     (f 10 20 30 40)) => "10"]
-#   [(let ([f (lambda (a0 a1 . args) (vector a0 a1))])
-#     (f 10 20 30 40 50 60 70 80 90 100)) => "#(10 20)"]
-#   [(let ([f (lambda (a0 a1 a2 . args) (vector a0 a1 a2))])
-#     (f 10 20 30 40 50 60 70 80 90 100)) => "#(10 20 30)"]
-#   [(let ([f (lambda (a0 a1 a2 a3 . args) (vector a0 a1 a2 a3))])
-#     (f 10 20 30 40 50 60 70 80 90 100)) => "#(10 20 30 40)"]
-#   [(let ([f (lambda (a0 a1 a2 a3 a4 . args) (vector a0 a1 a2 a3 a4))])
-#     (f 10 20 30 40 50 60 70 80 90 100)) => "#(10 20 30 40 50)"]
-#   [(let ([f (lambda (a0 a1 a2 a3 a4 a5 . args) (vector a0 a1 a2 a3 a4 a5))])
-#     (f 10 20 30 40 50 60 70 80 90 100)) => "#(10 20 30 40 50 60)"]
-# )
+("vararg not using rest argument",
+ (("(let ([f (lambda args 12)]) (f))", None, "12"),
+  ("(let ([f (lambda args 12)]) (f 10))", None, "12"),
+  ("(let ([f (lambda args 12)]) (f 10 20))", None, "12"),
+  ("(let ([f (lambda args 12)]) (f 10 20 30))", None, "12"),
+  ("(let ([f (lambda args 12)]) (f 10 20 30 40))", None, "12"),
+  ("(let ([f (lambda args 12)]) (f 10 20 30 40 50))", None, "12"),
+  ("(let ([f (lambda args 12)]) (f 10 20 30 40 50 60 70 80 90))", None, "12"),
+  ("(let ([f (lambda (a0 . args) 12)]) (f 10))", None, "12"),
+  ("(let ([f (lambda (a0 . args) a0)]) (f 10))", None, "10"),
+  ("(let ([f (lambda (a0 . args) 12)]) (f 10 20))", None, "12"),
+  ("(let ([f (lambda (a0 . args) a0)]) (f 10 20))", None, "10"),
+  ("(let ([f (lambda (a0 . args) 12)]) (f 10 20 30))", None, "12"),
+  ("(let ([f (lambda (a0 . args) a0)]) (f 10 20 30))", None, "10"),
+  ("(let ([f (lambda (a0 . args) 12)]) (f 10 20 30 40))", None, "12"),
+  ("(let ([f (lambda (a0 . args) a0)]) (f 10 20 30 40))", None, "10"),
+  ("(let ([f (lambda (a0 a1 . args) (vector a0 a1))]) (f 10 20 30 40 50 60 70 80 90 100))", None, "#(10 20)"),
+  ("(let ([f (lambda (a0 a1 a2 . args) (vector a0 a1 a2))]) (f 10 20 30 40 50 60 70 80 90 100))", None, "#(10 20 30)"),
+  ("(let ([f (lambda (a0 a1 a2 a3 . args) (vector a0 a1 a2 a3))]) (f 10 20 30 40 50 60 70 80 90 100))", None, "#(10 20 30 40)"),
+  ("(let ([f (lambda (a0 a1 a2 a3 a4 . args) (vector a0 a1 a2 a3 a4))]) (f 10 20 30 40 50 60 70 80 90 100))", None, "#(10 20 30 40 50)"),
+  ("(let ([f (lambda (a0 a1 a2 a3 a4 a5 . args) (vector a0 a1 a2 a3 a4 a5))]) (f 10 20 30 40 50 60 70 80 90 100))", None, "#(10 20 30 40 50 60)"),
+  )),
 
 
-# (add-tests-with-string-output "vararg using rest argument"
-#   [(let ([f (lambda args args)])
-#     (f)) => "()"]
-#   [(let ([f (lambda args args)])
-#     (f 10)) => "(10)"]
-#   [(let ([f (lambda args args)])
-#     (f 10 20)) => "(10 20)"]
-#   [(let ([f (lambda args args)])
-#     (f 10 20 30)) => "(10 20 30)"]
-#   [(let ([f (lambda args args)])
-#     (f 10 20 30 40)) => "(10 20 30 40)"]
-#   [(let ([f (lambda (a0 . args) (vector a0 args))])
-#     (f 10)) => "#(10 ())"]
-#   [(let ([f (lambda (a0 . args) (vector a0 args))])
-#     (f 10 20)) => "#(10 (20))"]
-#   [(let ([f (lambda (a0 . args) (vector a0 args))])
-#     (f 10 20 30)) => "#(10 (20 30))"]
-#   [(let ([f (lambda (a0 . args) (vector a0 args))])
-#     (f 10 20 30 40)) => "#(10 (20 30 40))"]
-#   [(let ([f (lambda (a0 a1 . args) (vector a0 a1 args))])
-#     (f 10 20 30 40 50 60 70 80 90)) => "#(10 20 (30 40 50 60 70 80 90))"]
-#   [(let ([f (lambda (a0 a1 a2 . args) (vector a0 a1 a2 args))])
-#     (f 10 20 30 40 50 60 70 80 90)) => "#(10 20 30 (40 50 60 70 80 90))"]
-#   [(let ([f (lambda (a0 a1 a2 a3 . args) (vector a0 a1 a2 a3 args))])
-#     (f 10 20 30 40 50 60 70 80 90)) => "#(10 20 30 40 (50 60 70 80 90))"]
-#   [(let ([f (lambda (a0 a1 a2 a3 a4 . args) (vector a0 a1 a2 a3 a4 args))])
-#     (f 10 20 30 40 50 60 70 80 90)) => "#(10 20 30 40 50 (60 70 80 90))"]
-#   [(let ([f (lambda (a0 a1 a2 a3 a4 a5 . args)(vector a0 a1 a2 a3 a4 a5 args))])
-#     (f 10 20 30 40 50 60 70 80 90)) => "#(10 20 30 40 50 60 (70 80 90))"]
-# )
+("vararg using rest argument",
+ (("(let ([f (lambda args args)]) (f))", None, "()"),
+  ("(let ([f (lambda args args)]) (f 10))", None, "(10)"),
+  ("(let ([f (lambda args args)]) (f 10 20))", None, "(10 20)"),
+  ("(let ([f (lambda args args)]) (f 10 20 30))", None, "(10 20 30)"),
+  ("(let ([f (lambda args args)]) (f 10 20 30 40))", None, "(10 20 30 40)"),
+  ("(let ([f (lambda (a0 . args) (vector a0 args))]) (f 10))", None, "#(10 ())"),
+  ("(let ([f (lambda (a0 . args) (vector a0 args))]) (f 10 20))", None, "#(10 (20))"),
+  ("(let ([f (lambda (a0 . args) (vector a0 args))]) (f 10 20 30))", None, "#(10 (20 30))"),
+  ("(let ([f (lambda (a0 . args) (vector a0 args))]) (f 10 20 30 40))", None, "#(10 (20 30 40))"),
+  ("(let ([f (lambda (a0 a1 . args) (vector a0 a1 args))]) (f 10 20 30 40 50 60 70 80 90))", None, "#(10 20 (30 40 50 60 70 80 90))"),
+  ("(let ([f (lambda (a0 a1 a2 . args) (vector a0 a1 a2 args))]) (f 10 20 30 40 50 60 70 80 90))", None, "#(10 20 30 (40 50 60 70 80 90))"),
+  ("(let ([f (lambda (a0 a1 a2 a3 . args) (vector a0 a1 a2 a3 args))]) (f 10 20 30 40 50 60 70 80 90))", None, "#(10 20 30 40 (50 60 70 80 90))"),
+  ("(let ([f (lambda (a0 a1 a2 a3 a4 . args) (vector a0 a1 a2 a3 a4 args))]) (f 10 20 30 40 50 60 70 80 90))", None, "#(10 20 30 40 50 (60 70 80 90))"),
+  ("(let ([f (lambda (a0 a1 a2 a3 a4 a5 . args)(vector a0 a1 a2 a3 a4 a5 args))]) (f 10 20 30 40 50 60 70 80 90))", None, "#(10 20 30 40 50 60 (70 80 90))"),
+  )),
 
-# (add-tests-with-string-output "symbols"
-#  [(symbol? 'foo) => "#t"]
-#  [(symbol? '()) => "#f"]
-#  [(symbol? "") => "#f"]
-#  [(symbol? '(1 2)) => "#f"]
-#  [(symbol? '#()) => "#f"]
-#  [(symbol? (lambda (x) x)) => "#f"]
-#  [(symbol? 'foo) => "#t"]
-#  [(string? 'foo) => "#f"]
-#  [(pair? 'foo) => "#f"]
-#  [(vector? 'foo) => "#f"]
-#  [(null? 'foo) => "#f"]
-#  [(boolean? 'foo) => "#f"]
-#  [(procedure? 'foo) => "#f"]
-#  [(eq? 'foo 'bar) => "#f"]
-#  [(eq? 'foo 'foo) => "#t"]
-#  ['foo => "foo"]
-#  ['(foo bar baz) => "(foo bar baz)"]
-#  ['(foo foo foo foo foo foo foo foo foo foo foo)
-#   => "(foo foo foo foo foo foo foo foo foo foo foo)"]
+("symbols",
+ (("(symbol? 'foo)", None, "#t"),
+  ("(symbol? '())", None, "#f"),
+  ("(symbol? "")", None, "#f"),
+  ("(symbol? '(1 2))", None, "#f"),
+  ("(symbol? '#())", None, "#f"),
+  ("(symbol? (lambda (x) x))", None, "#f"),
+  ("(symbol? 'foo)", None, "#t"),
+  ("(string? 'foo)", None, "#f"),
+  ("(pair? 'foo)", None, "#f"),
+  ("(vector? 'foo)", None, "#f"),
+  ("(null? 'foo)", None, "#f"),
+  ("(boolean? 'foo)", None, "#f"),
+  ("(procedure? 'foo)", None, "#f"),
+  ("(eq? 'foo 'bar)", None, "#f"),
+  ("(eq? 'foo 'foo)", None, "#t"),
+  ("'foo", None, "foo"),
+  ("'(foo bar baz)", None, "(foo bar baz)"),
+  ("'(foo foo foo foo foo foo foo foo foo foo foo)", None, "(foo foo foo foo foo foo foo foo foo foo foo)"),
+  )),
 
-# )
+("exit",
+ (('(foreign-call "exit" 0)', None, ""),
+  )),
 
-# (add-tests-with-string-output "exit"
-#  [(foreign-call "exit" 0) => ""]
-# )
+("S_error",
+ (("""(let ([error (lambda args
+                   (foreign-call "ik_error" args))])
+     (error #f "died")
+     12)""", None, ""),
 
-# (add-tests-with-string-output "S_error"
-#  [(let ([error (lambda args
-#                  (foreign-call "ik_error" args))])
-#    (error #f "died")
-#    12) => ""]
-
-#  [(let ([error (lambda args
-#                  (foreign-call "ik_error" args))])
-#    (error 'car "died")
-#    12) => ""]
-# )
+  ("""(let ([error (lambda args
+                   (foreign-call "ik_error" args))])
+     (error 'car "died")
+     12)""", None, ""),
+  )),
 
 
-# (add-tests-with-string-output "vector"
-#  [(fx= 1 2) => "#f"]
-#  [(vector 1 2 3 4 5) => "#(1 2 3 4 5)"]
-#  [(let ([f (lambda (f) (f 1 2 3 4 5 6))])
-#    (f vector)) => "#(1 2 3 4 5 6)"]
-#  )
+("vector",
+ (("(fx= 1 2)", None, "#f"),
+  ("(vector 1 2 3 4 5)", None, "#(1 2 3 4 5)"),
+  ("(let ([f (lambda (f) (f 1 2 3 4 5 6))]) (f vector))", None, "#(1 2 3 4 5 6)"),
+  )),
 
-# (add-tests-with-string-output "error"
-#   [(error 'foo "here") => ""])
+("error",
+ (("(error 'foo \"here\")", None, ""),
+  )),
 
 
-# (add-tests-with-string-output "apply error"
-#   [(let ([f 6])
-#      (f f)) => ""]
-#   [(let ([f 6])
-#      (f (f))) => ""]
-#   [(1 2 3) => ""]
-#   [(1 (3 4)) => ""]
-#   [(let ([f (lambda () (1 2 3))])
-#      12) => "12"]
-# )
+("apply error",
+ (("(let ([f 6]) (f f))", None, ""),
+  ("(let ([f 6]) (f (f)))", None, ""),
+  ("(1 2 3)", None, ""),
+  ("(1 (3 4))", None, ""),
+  ("(let ([f (lambda () (1 2 3))]) 12)", None, "12"),
+  )),
 
-# (add-tests-with-string-output "arg-check for fixed-arg procedures"
-#  [(let ([f (lambda () 12)])
-#     (f)) => "12"]
-#  [(let ([f (lambda () 12)])
-#     (f 1)) => ""]
-#  [(let ([f (lambda () 12)])
-#     (f 1 2)) => ""]
-#  [(let ([f (lambda (x) (fx+ x x))])
-#     (f)) => ""]
-#  [(let ([f (lambda (x) (fx+ x x))])
-#     (f 1)) => "2"]
-#  [(let ([f (lambda (x) (fx+ x x))])
-#     (f 1 2)) => ""]
-#  [(let ([f (lambda (x y) (fx* x (fx+ y y)))])
-#     (f)) => ""]
-#  [(let ([f (lambda (x y) (fx* x (fx+ y y)))])
-#     (f 2)) => ""]
-#  [(let ([f (lambda (x y) (fx* x (fx+ y y)))])
-#     (f 2 3)) => "12"]
-#  [(let ([f (lambda (x y) (fx* x (fx+ y y)))])
-#     (f 2 3 4)) => ""]
-# )
+("arg-check for fixed-arg procedures",
+ (("(let ([f (lambda () 12)]) (f))", None, "12"),
+  ("(let ([f (lambda () 12)]) (f 1))", None, ""),
+  ("(let ([f (lambda () 12)]) (f 1 2))", None, ""),
+  ("(let ([f (lambda (x) (fx+ x x))]) (f))", None, ""),
+  ("(let ([f (lambda (x) (fx+ x x))]) (f 1))", None, "2"),
+  ("(let ([f (lambda (x) (fx+ x x))]) (f 1 2))", None, ""),
+  ("(let ([f (lambda (x y) (fx* x (fx+ y y)))]) (f))", None, ""),
+  ("(let ([f (lambda (x y) (fx* x (fx+ y y)))]) (f 2))", None, ""),
+  ("(let ([f (lambda (x y) (fx* x (fx+ y y)))]) (f 2 3))", None, "12"),
+  ("(let ([f (lambda (x y) (fx* x (fx+ y y)))]) (f 2 3 4))", None, ""),
+  )),
 
-# (add-tests-with-string-output "arg-check for var-arg procedures"
-#  [(let ([f (lambda x x)])
-#     (f)) => "()"]
-#  [(let ([f (lambda x x)])
-#     (f 'a)) => "(a)"]
-#  [(let ([f (lambda x x)])
-#     (f 'a 'b)) => "(a b)"]
-#  [(let ([f (lambda x x)])
-#     (f 'a 'b 'c)) => "(a b c)"]
-#  [(let ([f (lambda x x)])
-#     (f 'a 'b 'c 'd)) => "(a b c d)"]
+("arg-check for var-arg procedures",
+ (("(let ([f (lambda x x)]) (f))", None, "()"),
+  ("(let ([f (lambda x x)]) (f 'a))", None, "(a)"),
+  ("(let ([f (lambda x x)]) (f 'a 'b))", None, "(a b)"),
+  ("(let ([f (lambda x x)]) (f 'a 'b 'c))", None, "(a b c)"),
+  ("(let ([f (lambda x x)]) (f 'a 'b 'c 'd))", None, "(a b c d)"),
 
-#  [(let ([f (lambda (x . rest) (vector x rest))])
-#     (f)) => ""]
-#  [(let ([f (lambda (x . rest) (vector x rest))])
-#     (f 'a)) => "#(a ())"]
-#  [(let ([f (lambda (x . rest) (vector x rest))])
-#     (f 'a 'b)) => "#(a (b))"]
-#  [(let ([f (lambda (x . rest) (vector x rest))])
-#     (f 'a 'b 'c)) => "#(a (b c))"]
-#  [(let ([f (lambda (x . rest) (vector x rest))])
-#     (f 'a 'b 'c 'd)) => "#(a (b c d))"]
+  ("(let ([f (lambda (x . rest) (vector x rest))]) (f))", None, ""),
+  ("(let ([f (lambda (x . rest) (vector x rest))]) (f 'a))", None, "#(a ())"),
+  ("(let ([f (lambda (x . rest) (vector x rest))]) (f 'a 'b))", None, "#(a (b))"),
+  ("(let ([f (lambda (x . rest) (vector x rest))]) (f 'a 'b 'c))", None, "#(a (b c))"),
+  ("(let ([f (lambda (x . rest) (vector x rest))]) (f 'a 'b 'c 'd))", None, "#(a (b c d))"),
 
-#  [(let ([f (lambda (x y . rest) (vector x y rest))])
-#     (f)) => ""]
-#  [(let ([f (lambda (x y . rest) (vector x y rest))])
-#     (f 'a)) => ""]
-#  [(let ([f (lambda (x y . rest) (vector x y rest))])
-#     (f 'a 'b)) => "#(a b ())"]
-#  [(let ([f (lambda (x y . rest) (vector x y rest))])
-#     (f 'a 'b 'c)) => "#(a b (c))"]
-#  [(let ([f (lambda (x y . rest) (vector x y rest))])
-#     (f 'a 'b 'c 'd)) => "#(a b (c d))"]
-# )
+  ("(let ([f (lambda (x y . rest) (vector x y rest))]) (f))", None, ""),
+  ("(let ([f (lambda (x y . rest) (vector x y rest))]) (f 'a))", None, ""),
+  ("(let ([f (lambda (x y . rest) (vector x y rest))]) (f 'a 'b))", None, "#(a b ())"),
+  ("(let ([f (lambda (x y . rest) (vector x y rest))]) (f 'a 'b 'c))", None, "#(a b (c))"),
+  ("(let ([f (lambda (x y . rest) (vector x y rest))]) (f 'a 'b 'c 'd))", None, "#(a b (c d))"),
+  )),
 
 
 # ;;; (add-tests-with-string-output "arg-check for primitives"
-# ;;;   [(cons 1 2 3) => ""]
-# ;;;   [(cons 1) => ""]
-# ;;;   [(vector-ref '#() 1 2 3 4) => ""]
-# ;;;   [(vector-ref) => ""]
-# ;;;   [(vector) => "#()"]
-# ;;;   [(string) => "\"\""]
+# ;;;   [(cons 1 2 3)", None, ""),
+# ;;;   [(cons 1)", None, ""),
+# ;;;   [(vector-ref '#() 1 2 3 4)", None, ""),
+# ;;;   [(vector-ref)", None, ""),
+# ;;;   [(vector)", None, "#()"),
+# ;;;   [(string), None, "\"\""]
 # ;;; )
 
-# (add-tests-with-string-output "string-set! errors"
-#   ; first with a fixed index
-# ;
-#  [(let ((t 1))
-#     (and (begin (set! t (fxadd1 t)) t)
-#          t)) => "2"]
+("string-set! errors",
+ (
+# first with a fixed index
+  ("(let ((t 1)) (and (begin (set! t (fxadd1 t)) t) t))", None, "2"),
+  ("(let ((f (if (boolean? (lambda () 12)) (lambda () 13) (lambda () 14)))) (f))", None, "14"),
 
-#  [(let ((f (if (boolean? (lambda () 12))
-#                (lambda () 13)
-#                (lambda () 14))))
-#     (f)) => "14"]
-
-#   [(let ([f 12])
-#      (let ([g (lambda () f)])
-#        (g))) => "12"]
-#   [(fx< 1 2) => "#t"]
-#   [(let ([f (lambda (x y) (fx< x y))])
-#      (f 10 10)) => "#f"]
-#   [(fx< 10 10) => "#f"]
-#   [(fx< 10 2) => "#f"]
-#   [(fx<= 1 2) => "#t"]
-#   [(fx<= 10 10) => "#t"]
-#   [(fx<= 10 2) => "#f"]
+  ("(let ([f 12]) (let ([g (lambda () f)]) (g)))", None, "12"),
+  ("(fx< 1 2)", None, "#t"),
+  ("(let ([f (lambda (x y) (fx< x y))]) (f 10 10))", None, "#f"),
+  ("(fx< 10 10)", None, "#f"),
+  ("(fx< 10 2)", None, "#f"),
+  ("(fx<= 1 2)", None, "#t"),
+  ("(fx<= 10 10)", None, "#t"),
+  ("(fx<= 10 2)", None, "#f"),
 #   #;[(let ([f
 #       (lambda (s i c)
 #     (unless (string? s)
@@ -1498,24 +1342,15 @@ TESTS = [
 #     ($string-set! s i c) 12)])
 #    (let ([x ($string #\a #\b #\c)]
 #          [y #\a])
-#      (f x 8 y))) => ""]
+#      (f x 8 y)))", None, ""),
 
-#   [(let ([x 12])
-#      (string-set! x 0 #\a)) => ""]
-#   [(let ([x (string #\a #\b #\c)]
-#          [y 12])
-#      (string-set! x 0 y)) => ""]
-#   [(let ([x (string #\a #\b #\c)]
-#          [y 12])
-#      (string-set! x 8 y)) => ""]
-#   [(let ([x (string #\a #\b #\c)]
-#          [y #\a])
-#      (string-set! x 8 y)) => ""]
-#   [(let ([x (string #\a #\b #\c)])
-#      (string-set! x 8 #\a)) => ""]
-#   [(let ([x (string #\a #\b #\c)]
-#          [y #\a])
-#      (string-set! x -1 y)) => ""]
+  ("(let ([x 12]) (string-set! x 0 #\a))", None, ""),
+  ("(let ([x (string #\a #\b #\c)] [y 12]) (string-set! x 0 y))", None, ""),
+  ("(let ([x (string #\a #\b #\c)] [y 12]) (string-set! x 8 y))", None, ""),
+  ("(let ([x (string #\a #\b #\c)] [y #\a]) (string-set! x 8 y))", None, ""),
+  ("(let ([x (string #\a #\b #\c)]) (string-set! x 8 #\a))", None, ""),
+  ("(let ([x (string #\a #\b #\c)] [y #\a]) (string-set! x -1 y))", None, ""),
+
 #  ; next the general case
 #  ;;; 6 kinds of errors:
 #  ;;;   string is either:
@@ -1528,569 +1363,488 @@ TESTS = [
 #  ;;;  If we skip over the lexical string check, (since I don't do it),
 #  ;;;  we have: 2x5x3 = 30 tests.
 
-#  [(let ([s (string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s i c) s)
-#   => "\"aXc\""]
-#  [(let ([s (string #\a #\b #\c)] [i 1]) (string-set! s i #\X) s)
-#   => "\"aXc\""]
-#  [(let ([s (string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s (string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s i c) s)", None, "\"aXc\""),
+  ("(let ([s (string #\a #\b #\c)] [i 1]) (string-set! s i #\X) s)", None, "\"aXc\""),
+  ("(let ([s (string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s i c) s)", None, ""),
 
-#  [(let ([s (string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s 1 c) s)
-#   => "\"aXc\""]
-#  [(let ([s (string #\a #\b #\c)] [i 1]) (string-set! s 1 #\X) s)
-#   => "\"aXc\""]
-#  [(let ([s (string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s 1 c) s)
-#   => ""]
+  ("(let ([s (string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s 1 c) s)", None, "\"aXc\""),
+  ("(let ([s (string #\a #\b #\c)] [i 1]) (string-set! s 1 #\X) s)", None, "\"aXc\""),
+  ("(let ([s (string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s 1 c) s)", None, ""),
 
-#  [(let ([s (string #\a #\b #\c)] [i 3] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s (string #\a #\b #\c)] [i 3]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s (string #\a #\b #\c)] [i 3] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s (string #\a #\b #\c)] [i 3] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s (string #\a #\b #\c)] [i 3]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s (string #\a #\b #\c)] [i 3] [c 'X]) (string-set! s i c) s)", None, ""),
 
-#  [(let ([s (string #\a #\b #\c)] [i -10] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s (string #\a #\b #\c)] [i -11]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s (string #\a #\b #\c)] [i -1] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s (string #\a #\b #\c)] [i -10] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s (string #\a #\b #\c)] [i -11]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s (string #\a #\b #\c)] [i -1] [c 'X]) (string-set! s i c) s)", None, ""),
 
-#  [(let ([s (string #\a #\b #\c)] [i 'foo] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s (string #\a #\b #\c)] [i 'foo]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s (string #\a #\b #\c)] [i 'foo] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s (string #\a #\b #\c)] [i 'foo] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s (string #\a #\b #\c)] [i 'foo]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s (string #\a #\b #\c)] [i 'foo] [c 'X]) (string-set! s i c) s)", None, ""),
 
 
 
-#  [(let ([s '(string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 1]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s '(string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 1]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s i c) s)", None, ""),
 
-#  [(let ([s '(string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s 1 c) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 1]) (string-set! s 1 #\X) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s 1 c) s)
-#   => ""]
+  ("(let ([s '(string #\a #\b #\c)] [i 1] [c #\X]) (string-set! s 1 c) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 1]) (string-set! s 1 #\X) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 1] [c 'X]) (string-set! s 1 c) s)", None, ""),
 
-#  [(let ([s '(string #\a #\b #\c)] [i 3] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 3]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 3] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s '(string #\a #\b #\c)] [i 3] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 3]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 3] [c 'X]) (string-set! s i c) s)", None, ""),
 
-#  [(let ([s '(string #\a #\b #\c)] [i -10] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i -11]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i -1] [c 'X]) (string-set! s i c) s)
-#   => ""]
+  ("(let ([s '(string #\a #\b #\c)] [i -10] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i -11]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i -1] [c 'X]) (string-set! s i c) s)", None, ""),
 
-#  [(let ([s '(string #\a #\b #\c)] [i 'foo] [c #\X]) (string-set! s i c) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 'foo]) (string-set! s i #\X) s)
-#   => ""]
-#  [(let ([s '(string #\a #\b #\c)] [i 'foo] [c 'X]) (string-set! s i c) s)
-#   => ""]
-# )
+  ("(let ([s '(string #\a #\b #\c)] [i 'foo] [c #\X]) (string-set! s i c) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 'foo]) (string-set! s i #\X) s)", None, ""),
+  ("(let ([s '(string #\a #\b #\c)] [i 'foo] [c 'X]) (string-set! s i c) s)", None, ""),
+  )),
 
-# #!eof
+("string errors",
+ (("(let ([f (lambda (a b c) (string a b c))]) (f #\\a #\\b #\\c))", None, "\"abc\""),
+  ("(let ([f (lambda (a b c) (string a b c))]) (f #\\a 12 #\\c))", None, ""),
+  ("(let ([f string]) (f #\\a #\\b #\\c))", None, "\"abc\""),
+  ("(let ([f string]) (f #\\a #\\b 'x))", None,  ""),
+  ("(string #\\a #\\b #\\c)", None, "\"abc\""),
+  ("(string #\\a #\\b #t)", None, ""),
+  )),
 
-# (add-tests-with-string-output "string errors"
-#   [(let ([f (lambda (a b c) (string a b c))])
-#      (f #\a #\b #\c)) => "\"abc\""]
-#   [(let ([f (lambda (a b c) (string a b c))])
-#      (f #\a 12 #\c)) => ""]
-#   [(let ([f string])
-#      (f #\a #\b #\c)) => "\"abc\""]
-#   [(let ([f string])
-#      (f #\a #\b 'x)) =>  ""]
-#   [(string #\a #\b #\c) => "\"abc\""]
-#   [(string #\a #\b #t) => ""]
-# )
+("nontail apply",
+ (("(let ([f (lambda () 12)]) (fx+ (apply f '()) 1))", None, "13"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (fx+ (apply f 13 '()) 1))", None, "26"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (fx+ (apply f (cons 13 '())) 1))", None, "26"),
+  ("(let ([f (lambda (x y z) (fx+ x (fx* y z)))]) (fx+ (apply f 12 '(7 2)) 1))", None, "27"),
+  ("(cons (apply vector '(1 2 3 4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 '(2 3 4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 '(3 4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 '(4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 '(5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 '(6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 6 '(7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 6 7 '(8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 6 7 8 ()) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  )),
 
-# (add-tests-with-string-output "nontail apply"
-#  [(let ([f (lambda () 12)])
-#    (fx+ (apply f '()) 1)) => "13"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (fx+ (apply f 13 '()) 1)) => "26"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (fx+ (apply f (cons 13 '())) 1)) => "26"]
-#  [(let ([f (lambda (x y z) (fx+ x (fx* y z)))])
-#    (fx+ (apply f 12 '(7 2)) 1)) => "27"]
-#  [(cons (apply vector '(1 2 3 4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 '(2 3 4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 '(3 4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 '(4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 '(5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 '(6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 6 '(7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 6 7 '(8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 6 7 8 ()) '()) => "(#(1 2 3 4 5 6 7 8))"]
-# )
+("tail apply",
+ (("(let ([f (lambda () 12)]) (apply f '()))", None, "12"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (apply f 13 '()))", None, "25"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (apply f (cons 13 '())))", None, "25"),
+  ("(let ([f (lambda (x y z) (fx+ x (fx* y z)))]) (apply f 12 '(7 2)))", None, "26"),
+  ("(apply vector '(1 2 3 4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 '(2 3 4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 '(3 4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 '(4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 '(5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 '(6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 6 '(7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 6 7 '(8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 6 7 8 ())", None, "#(1 2 3 4 5 6 7 8)"),
+  )),
 
-# (add-tests-with-string-output "tail apply"
-#  [(let ([f (lambda () 12)])
-#    (apply f '())) => "12"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (apply f 13 '())) => "25"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (apply f (cons 13 '()))) => "25"]
-#  [(let ([f (lambda (x y z) (fx+ x (fx* y z)))])
-#    (apply f 12 '(7 2))) => "26"]
-#  [(apply vector '(1 2 3 4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 '(2 3 4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 '(3 4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 '(4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 '(5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 '(6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 6 '(7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 6 7 '(8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 6 7 8 ()) => "#(1 2 3 4 5 6 7 8)"]
-# )
+("nontail apply",
+ (("(let ([f (lambda () 12)]) (fx+ (apply f '()) 1))", None, "13"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (fx+ (apply f 13 '()) 1))", None, "26"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (fx+ (apply f (cons 13 '())) 1))", None, "26"),
+  ("(let ([f (lambda (x y z) (fx+ x (fx* y z)))]) (fx+ (apply f 12 '(7 2)) 1))", None, "27"),
+  ("(cons (apply vector '(1 2 3 4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 '(2 3 4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 '(3 4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 '(4 5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 '(5 6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 '(6 7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 6 '(7 8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 6 7 '(8)) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  ("(cons (apply vector 1 2 3 4 5 6 7 8 ()) '())", None, "(#(1 2 3 4 5 6 7 8))"),
+  )),
 
+("tail apply",
+ (("(let ([f (lambda () 12)]) (apply f '()))", None, "12"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (apply f 13 '()))", None, "25"),
+  ("(let ([f (lambda (x) (fx+ x 12))]) (apply f (cons 13 '())))", None, "25"),
+  ("(let ([f (lambda (x y z) (fx+ x (fx* y z)))]) (apply f 12 '(7 2)))", None, "26"),
+  ("(apply vector '(1 2 3 4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 '(2 3 4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 '(3 4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 '(4 5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 '(5 6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 '(6 7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 6 '(7 8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 6 7 '(8))", None, "#(1 2 3 4 5 6 7 8)"),
+  ("(apply vector 1 2 3 4 5 6 7 8 ())", None, "#(1 2 3 4 5 6 7 8)"),
+  )),
 
+("remainder/modulo/quotient",
+ (("(fxquotient 16 4)", None, "4"),
+  ("(fxquotient 5 2)", None, "2"),
+  ("(fxquotient -45 7)", None, "-6"),
+  ("(fxquotient 10 -3)", None, "-3"),
+  ("(fxquotient -17 -9)", None, "1"),
 
+  ("(fxremainder 16 4)", None, "0"),
+  ("(fxremainder 5 2)", None, "1"),
+  ("(fxremainder -45 7)", None, "-3"),
+  ("(fxremainder 10 -3)", None, "1"),
+  ("(fxremainder -17 -9)", None, "-8"),
 
-# (add-tests-with-string-output "nontail apply"
-#  [(let ([f (lambda () 12)])
-#    (fx+ (apply f '()) 1)) => "13"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (fx+ (apply f 13 '()) 1)) => "26"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (fx+ (apply f (cons 13 '())) 1)) => "26"]
-#  [(let ([f (lambda (x y z) (fx+ x (fx* y z)))])
-#    (fx+ (apply f 12 '(7 2)) 1)) => "27"]
-#  [(cons (apply vector '(1 2 3 4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 '(2 3 4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 '(3 4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 '(4 5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 '(5 6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 '(6 7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 6 '(7 8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 6 7 '(8)) '()) => "(#(1 2 3 4 5 6 7 8))"]
-#  [(cons (apply vector 1 2 3 4 5 6 7 8 ()) '()) => "(#(1 2 3 4 5 6 7 8))"]
-# )
+  ("(fxmodulo  16  4)", None, "0"),
+  ("(fxmodulo   5  2)", None, "1"),
+  ("(fxmodulo -45  7)", None, "4"),
+  ("(fxmodulo  10 -3)", None, "-2"),
+  ("(fxmodulo -17 -9)", None, "-8"),
+  ("(let ([t  4]) (fxmodulo  16 t))", None, "0"),
+  ("(let ([t  2]) (fxmodulo   5 t))", None, "1"),
+  ("(let ([t  7]) (fxmodulo -45 t))", None, "4"),
+  ("(let ([t -3]) (fxmodulo  10 t))", None, "-2"),
+  ("(let ([t -9]) (fxmodulo -17 t))", None, "-8"),
+  )),
 
-# (add-tests-with-string-output "tail apply"
-#  [(let ([f (lambda () 12)])
-#    (apply f '())) => "12"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (apply f 13 '())) => "25"]
-#  [(let ([f (lambda (x) (fx+ x 12))])
-#    (apply f (cons 13 '()))) => "25"]
-#  [(let ([f (lambda (x y z) (fx+ x (fx* y z)))])
-#    (apply f 12 '(7 2))) => "26"]
-#  [(apply vector '(1 2 3 4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 '(2 3 4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 '(3 4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 '(4 5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 '(5 6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 '(6 7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 6 '(7 8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 6 7 '(8)) => "#(1 2 3 4 5 6 7 8)"]
-#  [(apply vector 1 2 3 4 5 6 7 8 ()) => "#(1 2 3 4 5 6 7 8)"]
-# )
-# (add-tests-with-string-output "remainder/modulo/quotient"
-#   [#\tab => "#\\tab"]
-#   [(fxquotient 16 4) => "4"]
-#   [(fxquotient 5 2) => "2"]
-#   [(fxquotient -45 7) => "-6"]
-#   [(fxquotient 10 -3) => "-3"]
-#   [(fxquotient -17 -9) => "1"]
-
-#   [(fxremainder 16 4) => "0"]
-#   [(fxremainder 5 2) => "1"]
-#   [(fxremainder -45 7) => "-3"]
-#   [(fxremainder 10 -3) => "1"]
-#   [(fxremainder -17 -9) => "-8"]
-
-# ;  [(fxmodulo 16 4) => "0"]
-# ;  [(fxmodulo 5 2) => "1"]
-# ;  [(fxmodulo -45 7) => "4"]
-# ;  [(fxmodulo 10 -3) => "-2"]
-# ;  [(fxmodulo -17 -9) => "-8"]
-# )
-
-# (add-tests-with-string-output "write-char"
-#   [(begin
-#     (write-char #\a)
-#     (flush-output-port (current-output-port))
-#     (exit)) => "a"]
-#   [(begin
-#     (write-char #\a)
-#     (close-output-port (current-output-port))
-#     (exit)) => "a"]
-#   [(begin
-#     (write-char #\H)
-#     (write-char #\e)
-#     (write-char #\l)
-#     (write-char #\l)
-#     (write-char #\o)
-#     (write-char #\space)
-#     (flush-output-port)
-#     (write-char #\W)
-#     (write-char #\o)
-#     (write-char #\r)
-#     (write-char #\l)
-#     (write-char #\d)
-#     (write-char #\!)
-#     (flush-output-port (current-output-port))
-#     (exit)) => "Hello World!"]
-# )
+("write-char",
+ (("""(begin
+       (write-char #\\a)
+       (flush-output-port (current-output-port))
+       (exit))""", None, "a"),
+  ("""(begin
+       (write-char #\\a)
+       (close-output-port (current-output-port))
+       (exit))""", None, "a"),
+  ("""(begin
+       (write-char #\\H)
+       (write-char #\\e)
+       (write-char #\\l)
+       (write-char #\\l)
+       (write-char #\\o)
+       (write-char #\\space)
+       (flush-output-port)
+       (write-char #\\W)
+       (write-char #\\o)
+       (write-char #\\r)
+       (write-char #\\l)
+       (write-char #\\d)
+       (write-char #\\!)
+       (flush-output-port (current-output-port))
+       (exit))""", None, "Hello World!"),
+  )),
 
 
-# (add-tests-with-string-output "write/display"
-#   [(fx+ -536870911 -1) => "-536870912"]
-#   [(begin
-#      (write '(1 2 3))
-#      (exit)) => "(1 2 3)"]
-#   [(begin
-#      (write '"Hello World!")
-#      (exit)) => "\"Hello World!\""]
-# )
+("write/display",
+ (("(fx+ -536870911 -1)", None, "-536870912"),
+  ("""(begin
+        (write '(1 2 3))
+        (exit))""", None, "(1 2 3)"),
+  ("""(begin
+        (write '"Hello World!")
+        (exit))""", None, "\"Hello World!\""),
+  )),
 
-# (add-tests-with-string-output "eof-object"
-#   [(eof-object? (eof-object)) => "#t"]
+("eof-object",
+ (("(eof-object? (eof-object))", None, "#t"),
+  ("(null? (eof-object))", None, "#f"),
+  ("(boolean? (eof-object))", None, "#f"),
+  ("(string? (eof-object))", None, "#f"),
+  ("(char? (eof-object))", None, "#f"),
+  ("(pair? (eof-object))", None, "#f"),
+  ("(symbol? (eof-object))", None, "#f"),
+  ("(procedure? (eof-object))", None, "#f"),
+  ("(vector? (eof-object))", None, "#f"),
+  ("(not (eof-object))", None, "#f"),
+  ("(eof-object? #\\a)", None, "#f"),
+  ("(eof-object? #t)", None, "#f"),
+  ("(eof-object? 12)", None, "#f"),
+  ("(eof-object? '(1 2 3))", None, "#f"),
+  ("(eof-object? '())", None, "#f"),
+  ("(eof-object? '#(foo))", None, "#f"),
+  ("(eof-object? (lambda (x) x))", None, "#f"),
+  ("(eof-object? 'baz)", None, "#f"),
+  )),
 
-#   [(null? (eof-object)) => "#f"]
-#   [(boolean? (eof-object)) => "#f"]
-#   [(string? (eof-object)) => "#f"]
-#   [(char? (eof-object)) => "#f"]
-#   [(pair? (eof-object)) => "#f"]
-#   [(symbol? (eof-object)) => "#f"]
-#   [(procedure? (eof-object)) => "#f"]
-#   [(vector? (eof-object)) => "#f"]
-#   [(not (eof-object)) => "#f"]
+("read-char",
+ (("""(begin
+        (let ([p (open-output-file "stst.tmp" 'replace)])
+          (display "Hello World!" p)
+          (close-output-port p))
+        (let ([p (open-input-file "stst.tmp")])
+          (define loop
+            (lambda ()
+              (let ([x (read-char p)])
+                (if (eof-object? x)
+                    (begin
+                      (close-input-port p)
+                      '())
+                    (begin
+                      (display x)
+                      (loop))))))
+          (loop))
+        (exit))""", None, "Hello World!"),
+  ("""(let ([s (make-string 10000)]
+            [t "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz12344567890<>,./?;:'\"[]{}\\|`~!@#$%^&*()-_=+"])
+        (define fill-string!
+          (lambda (i j)
+            (unless (fx= i (string-length s))
+              (if (fx>= j (string-length t))
+                  (fill-string! i (fx- j (string-length t)))
+                  (begin
+                    (string-set! s i (string-ref t j))
+                    (fill-string! (fxadd1 i) (fx+ j 17)))))))
+        (define write-string!
+          (lambda (i p)
+            (cond
+              [(fx= i (string-length s)) (close-output-port p)]
+              [else
+               (write-char (string-ref s i) p)
+               (write-string! (fxadd1 i) p)])))
+        (define verify
+          (lambda (i p)
+            (let ([x (read-char p)])
+              (cond
+                [(eof-object? x)
+                 (close-input-port p)
+                 (fx= i (string-length s))]
+                [(fx= i (string-length s)) (error 'verify "file too short")]
+                [(char= (string-ref s i) x)
+                 (verify (fxadd1 i) p)]
+                [else (error 'verify "mismatch")]))))
+        (fill-string! 0 0)
+        (write-string! 0 (open-output-file "stst.tmp" 'replace))
+        (verify 0 (open-input-file "stst.tmp")))""", None, "#t"),
+  )),
 
-#   [(eof-object? #\a) => "#f"]
-#   [(eof-object? #t) => "#f"]
-#   [(eof-object? 12) => "#f"]
-#   [(eof-object? '(1 2 3)) => "#f"]
-#   [(eof-object? '()) => "#f"]
-#   [(eof-object? '#(foo)) => "#f"]
-#   [(eof-object? (lambda (x) x)) => "#f"]
-#   [(eof-object? 'baz) => "#f"]
-#   )
-
-
-
-# (add-tests-with-string-output "read-char"
-#   [(begin
-#      (let ([p (open-output-file "stst.tmp" 'replace)])
-#        (display "Hello World!" p)
-#        (close-output-port p))
-#      (let ([p (open-input-file "stst.tmp")])
-#        (define loop
-#          (lambda ()
-#            (let ([x (read-char p)])
-#              (if (eof-object? x)
-#                  (begin
-#                    (close-input-port p)
-#                    '())
-#                  (begin
-#                    (display x)
-#                    (loop))))))
-#        (loop))
-#      (exit))
-#    => "Hello World!"]
-#   [(let ([s (make-string 10000)]
-#          [t "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz12344567890<>,./?;:'\"[]{}\\|`~!@#$%^&*()-_=+"])
-#      (define fill-string!
-#        (lambda (i j)
-#          (unless (fx= i (string-length s))
-#            (if (fx>= j (string-length t))
-#                (fill-string! i (fx- j (string-length t)))
-#                (begin
-#                  (string-set! s i (string-ref t j))
-#                  (fill-string! (fxadd1 i) (fx+ j 17)))))))
-#      (define write-string!
-#        (lambda (i p)
-#          (cond
-#            [(fx= i (string-length s)) (close-output-port p)]
-#            [else
-#             (write-char (string-ref s i) p)
-#             (write-string! (fxadd1 i) p)])))
-#      (define verify
-#        (lambda (i p)
-#          (let ([x (read-char p)])
-#            (cond
-#              [(eof-object? x)
-#               (close-input-port p)
-#               (fx= i (string-length s))]
-#              [(fx= i (string-length s)) (error 'verify "file too short")]
-#              [(char= (string-ref s i) x)
-#               (verify (fxadd1 i) p)]
-#              [else (error 'verify "mismatch")]))))
-#      (fill-string! 0 0)
-#      (write-string! 0 (open-output-file "stst.tmp" 'replace))
-#      (verify 0 (open-input-file "stst.tmp"))) => "#t"]
-# )
-
-# #!eof
-
-# (add-tests-with-string-output "tokenizer"
-#   [(let ()
-#      (define test-tokenizer
-#        (lambda (p)
-#          ;(display (input-port? p) (standard-error-port))
-#          (let ([tok (read-token p)])
-#            (cond
-#             [(eof-object? tok) 'ok]
-#             [(or (eq? tok 'lparen)
-#                  (eq? tok 'rparen)
-#                  (eq? tok 'vparen)
-#                  (eq? tok 'lbrack)
-#                  (eq? tok 'rbrack)
-#                  (eq? tok 'dot)
-#                  (and (pair? tok)
-#                       (or (eq? (car tok) 'datum)
-#                           (eq? (car tok) 'macro))))
-#              (test-tokenizer p)]
-#             [else
-#              (display tok)
-#              (error 'test "Invalid token ~s" tok)]))))
-#      (define test-file
-#        (lambda (filename)
-#          (display "Testing " (standard-error-port))
-#          (display filename (standard-error-port))
-#          (display "..." (standard-error-port))
-#          (let ([p (open-input-file filename)])
-#          ;  (display (input-port? p)(standard-error-port))
-#            (test-tokenizer p))))
-#      (define test-files
-#        (lambda (files)
-#          (unless (null? files)
-#            (test-file (car files))
-#            (test-files (cdr files)))))
-#      (define filenames
-#        '("libsymboltable-3.3.ss"
-#          "libhandlers-3.3.ss"
-#          "libcore-4.3.ss"
-#          "libio-4.2.ss"
-#          "libwriter-4.1.ss"
-#          "libtokenizer-4.3.ss"
-#          "compiler-4.3.ss"))
-#      (when (null? filenames)
-#        (error 'no-files-provided-in-test "add them"))
-#      (test-files filenames)
-#      'ok) => "ok"]
-
-# )
+("tokenizer",
+ (("""(let ()
+        (define test-tokenizer
+          (lambda (p)
+            ;(display (input-port? p) (standard-error-port))
+            (let ([tok (read-token p)])
+              (cond
+               [(eof-object? tok) 'ok]
+               [(or (eq? tok 'lparen)
+                    (eq? tok 'rparen)
+                    (eq? tok 'vparen)
+                    (eq? tok 'lbrack)
+                    (eq? tok 'rbrack)
+                    (eq? tok 'dot)
+                    (and (pair? tok)
+                         (or (eq? (car tok) 'datum)
+                             (eq? (car tok) 'macro))))
+                (test-tokenizer p)]
+               [else
+                (display tok)
+                (error 'test "Invalid token ~s" tok)]))))
+        (define test-file
+          (lambda (filename)
+            (display "Testing " (standard-error-port))
+            (display filename (standard-error-port))
+            (display "..." (standard-error-port))
+            (let ([p (open-input-file filename)])
+            ;  (display (input-port? p)(standard-error-port))
+              (test-tokenizer p))))
+        (define test-files
+          (lambda (files)
+            (unless (null? files)
+              (test-file (car files))
+              (test-files (cdr files)))))
+        (define filenames
+          '("libsymboltable-3.3.ss"
+            "libhandlers-3.3.ss"
+            "libcore-4.3.ss"
+            "libio-4.2.ss"
+            "libwriter-4.1.ss"
+            "libtokenizer-4.3.ss"
+            "compiler-4.3.ss"))
+        (when (null? filenames)
+          (error 'no-files-provided-in-test "add them"))
+        (test-files filenames)
+        'ok)""", None, "ok"),
+  )),
 
 
+("reader",
+ (("""(let ()
+        (define test-reader
+          (lambda (p)
+            (let ([x (read p)])
+              (cond
+               [(eof-object? x) 'ok]
+               [else (test-reader p)]))))
+        (define test-file
+          (lambda (filename)
+            (display "Testing " (standard-error-port))
+            (display filename (standard-error-port))
+            (display "..." (standard-error-port))
+            (test-reader (open-input-file filename))))
+        (define test-files
+          (lambda (files)
+            (unless (null? files)
+              (test-file (car files))
+              (test-files (cdr files)))))
+        (define filenames
+          '("libsymboltable-3.3.ss"
+            "libhandlers-3.3.ss"
+            "libcore-4.3.ss"
+            "libio-4.2.ss"
+            "libwriter-4.1.ss"
+            "libtokenizer-4.3.ss"
+            "compiler-4.3.ss"))
+        (when (null? filenames)
+          (error 'no-files-provided-in-test "add them"))
+        (test-files filenames)
+        'ok)""", None, "ok"),
+  )),
 
-# (add-tests-with-string-output "reader"
-#   [(let ()
-#      (define test-reader
-#        (lambda (p)
-#          (let ([x (read p)])
-#            (cond
-#             [(eof-object? x) 'ok]
-#             [else (test-reader p)]))))
-#      (define test-file
-#        (lambda (filename)
-#          (display "Testing " (standard-error-port))
-#          (display filename (standard-error-port))
-#          (display "..." (standard-error-port))
-#          (test-reader (open-input-file filename))))
-#      (define test-files
-#        (lambda (files)
-#          (unless (null? files)
-#            (test-file (car files))
-#            (test-files (cdr files)))))
-#      (define filenames
-#        '("libsymboltable-3.3.ss"
-#          "libhandlers-3.3.ss"
-#          "libcore-4.3.ss"
-#          "libio-4.2.ss"
-#          "libwriter-4.1.ss"
-#          "libtokenizer-4.3.ss"
-#          "compiler-4.3.ss"))
-#      (when (null? filenames)
-#        (error 'no-files-provided-in-test "add them"))
-#      (test-files filenames)
-#      'ok) => "ok"]
+("tokenizer",
+ (("""(let ()
+        (define test-tokenizer
+          (lambda (p)
+            ;(display (input-port? p) (standard-error-port))
+            (let ([tok (read-token p)])
+              (cond
+               [(eof-object? tok) 'ok]
+               [(or (eq? tok 'lparen)
+                    (eq? tok 'rparen)
+                    (eq? tok 'vparen)
+                    (eq? tok 'lbrack)
+                    (eq? tok 'rbrack)
+                    (eq? tok 'dot)
+                    (and (pair? tok)
+                         (or (eq? (car tok) 'datum)
+                             (eq? (car tok) 'macro))))
+                (test-tokenizer p)]
+               [else
+                (display tok)
+                (error 'test "Invalid token ~s" tok)]))))
+        (define test-file
+          (lambda (filename)
+            (display "Testing " (standard-error-port))
+            (display filename (standard-error-port))
+            (display "..." (standard-error-port))
+            (let ([p (open-input-file filename)])
+            ;  (display (input-port? p)(standard-error-port))
+              (test-tokenizer p))))
+        (define test-files
+          (lambda (files)
+            (unless (null? files)
+              (test-file (car files))
+              (test-files (cdr files)))))
+        (define filenames
+          '("libsymboltable-4.4.ss"
+            "libhandlers-3.3.ss"
+            "libcore-4.4.ss"
+            "libio-4.2.ss"
+            "libwriter-4.4.ss"
+            "libtokenizer-4.3.ss"
+            "compiler-5.1.ss"))
+        (when (null? filenames)
+          (error 'no-files-provided-in-test "add them"))
+        (test-files filenames)
+        'ok)""", None, "ok"),
+  )),
 
-# )
+("reader",
+ (("""(let ()
+        (define test-reader
+          (lambda (p)
+            (let ([x (read p)])
+              (cond
+               [(eof-object? x) 'ok]
+               [else (test-reader p)]))))
+        (define test-file
+          (lambda (filename)
+            (display "Testing " (standard-error-port))
+            (display filename (standard-error-port))
+            (display "..." (standard-error-port))
+            (test-reader (open-input-file filename))))
+        (define test-files
+          (lambda (files)
+            (unless (null? files)
+              (test-file (car files))
+              (test-files (cdr files)))))
+        (define filenames
+          '("libsymboltable-4.4.ss"
+            "libhandlers-3.3.ss"
+            "libcore-4.4.ss"
+            "libio-4.2.ss"
+            "libwriter-4.4.ss"
+            "libtokenizer-4.3.ss"
+            "compiler-5.1.ss"))
+        (when (null? filenames)
+          (error 'no-files-provided-in-test "add them"))
+        (test-files filenames)
+        'ok)""", None, "ok"),
+  )),
 
-# #!eof
-# (add-tests-with-string-output "tokenizer"
-#   [(let ()
-#      (define test-tokenizer
-#        (lambda (p)
-#          ;(display (input-port? p) (standard-error-port))
-#          (let ([tok (read-token p)])
-#            (cond
-#             [(eof-object? tok) 'ok]
-#             [(or (eq? tok 'lparen)
-#                  (eq? tok 'rparen)
-#                  (eq? tok 'vparen)
-#                  (eq? tok 'lbrack)
-#                  (eq? tok 'rbrack)
-#                  (eq? tok 'dot)
-#                  (and (pair? tok)
-#                       (or (eq? (car tok) 'datum)
-#                           (eq? (car tok) 'macro))))
-#              (test-tokenizer p)]
-#             [else
-#              (display tok)
-#              (error 'test "Invalid token ~s" tok)]))))
-#      (define test-file
-#        (lambda (filename)
-#          (display "Testing " (standard-error-port))
-#          (display filename (standard-error-port))
-#          (display "..." (standard-error-port))
-#          (let ([p (open-input-file filename)])
-#          ;  (display (input-port? p)(standard-error-port))
-#            (test-tokenizer p))))
-#      (define test-files
-#        (lambda (files)
-#          (unless (null? files)
-#            (test-file (car files))
-#            (test-files (cdr files)))))
-#      (define filenames
-#        '("libsymboltable-4.4.ss"
-#          "libhandlers-3.3.ss"
-#          "libcore-4.4.ss"
-#          "libio-4.2.ss"
-#          "libwriter-4.4.ss"
-#          "libtokenizer-4.3.ss"
-#          "compiler-5.1.ss"))
-#      (when (null? filenames)
-#        (error 'no-files-provided-in-test "add them"))
-#      (test-files filenames)
-#      'ok) => "ok"]
-
-# )
-
-
-
-# (add-tests-with-string-output "reader"
-#   [(let ()
-#      (define test-reader
-#        (lambda (p)
-#          (let ([x (read p)])
-#            (cond
-#             [(eof-object? x) 'ok]
-#             [else (test-reader p)]))))
-#      (define test-file
-#        (lambda (filename)
-#          (display "Testing " (standard-error-port))
-#          (display filename (standard-error-port))
-#          (display "..." (standard-error-port))
-#          (test-reader (open-input-file filename))))
-#      (define test-files
-#        (lambda (files)
-#          (unless (null? files)
-#            (test-file (car files))
-#            (test-files (cdr files)))))
-#      (define filenames
-#        '("libsymboltable-4.4.ss"
-#          "libhandlers-3.3.ss"
-#          "libcore-4.4.ss"
-#          "libio-4.2.ss"
-#          "libwriter-4.4.ss"
-#          "libtokenizer-4.3.ss"
-#          "compiler-5.1.ss"))
-#      (when (null? filenames)
-#        (error 'no-files-provided-in-test "add them"))
-#      (test-files filenames)
-#      'ok) => "ok"]
-
-# )
-
-
-# (add-tests-with-string-output "overflow"
-#   [(letrec ([f
-#      (lambda (i)
-#        (when (fx<= i 1000)
-#          (let ([x (make-list 1000)])
-#            (f (fxadd1 i)))))])
-#     (f 0)
-#     100) => "100"]
-#   [(letrec ([f
-#      (lambda (i)
-#        (when (fx<= i 100000)
-#          (let ([x (list 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-#                         0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)])
-#            (f (fxadd1 i)))))])
-#     (f 0)
-#     100) => "100"])
+("overflow",
+ (("""(letrec ([f
+        (lambda (i)
+          (when (fx<= i 1000)
+            (let ([x (make-list 1000)])
+              (f (fxadd1 i)))))])
+       (f 0)
+       100)""", None, "100"),
+  ("""(letrec ([f
+        (lambda (i)
+          (when (fx<= i 100000)
+            (let ([x (list 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+                           0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)])
+              (f (fxadd1 i)))))])
+       (f 0)
+       100)""", None, "100"),
+  )),
 
 
-# (add-tests-with-string-output "call/cc"
-#   [(call/cc (lambda (k) 12)) => "12"]
-#   [(call/cc (lambda (k) (k 12))) => "12"]
-#   [(call/cc (lambda (k) (fx+ 1 (k 12)))) => "12"]
-#   [(fx+ (call/cc (lambda (k) (k 12)))
-#         (call/cc (lambda (k) 13))) => "25"]
-#   [(letrec ([fact
-#              (lambda (n k)
-#                (cond
-#                  [(fxzero? n) (k 1)]
-#                  [else (fx* n (fact (fxsub1 n) k))]))])
-#      (call/cc
-#        (lambda (k)
-#          (fact 5 k)))) => "1"]
-#   [(call/cc
-#     (lambda (k)
-#       (letrec ([fact
-#                 (lambda (n)
-#                   (cond
-#                     [(fxzero? n) (k 1)]
-#                     [else (fx* n (fact (fxsub1 n)))]))])
-#         (fact 5)))) => "1"]
-#   [(let ([k #f])
-#      (letrec ([fact
-#                (lambda (n)
-#                  (cond
-#                    [(fxzero? n)
-#                     (call/cc
-#                       (lambda (nk)
-#                         (set! k nk)
-#                         (k 1)))]
-#                    [else (fx* n (fact (fxsub1 n)))]))])
-#         (let ([v (fact 5)])
-#           v))) => "120"]
-#   [(let ([k #f])
-#      (letrec ([fact
-#                (lambda (n)
-#                  (cond
-#                    [(fxzero? n)
-#                     (call/cc
-#                       (lambda (nk)
-#                         (set! k nk)
-#                         (k 1)))]
-#                    [else (fx* n (fact (fxsub1 n)))]))])
-#         (let ([v (fact 5)])
-#           (let ([nk k])
-#             (set! k (lambda (x) (cons v x)))
-#             (nk v))))) => "(120 . 14400)"]
-#   )
-
-
-# (add-tests-with-string-output "fxmodulo"
-#   [(fxmodulo  16  4) => "0"]
-#   [(fxmodulo   5  2) => "1"]
-#   [(fxmodulo -45  7) => "4"]
-#   [(fxmodulo  10 -3) => "-2"]
-#   [(fxmodulo -17 -9) => "-8"]
-
-#   [(let ([t  4]) (fxmodulo  16 t)) => "0"]
-#   [(let ([t  2]) (fxmodulo   5 t)) => "1"]
-#   [(let ([t  7]) (fxmodulo -45 t)) => "4"]
-#   [(let ([t -3]) (fxmodulo  10 t)) => "-2"]
-#   [(let ([t -9]) (fxmodulo -17 t)) => "-8"]
-# )
-
+("call/cc",
+ (("(call/cc (lambda (k) 12))", None, "12"),
+  ("(call/cc (lambda (k) (k 12)))", None, "12"),
+  ("(call/cc (lambda (k) (fx+ 1 (k 12))))", None, "12"),
+  ("(fx+ (call/cc (lambda (k) (k 12))) (call/cc (lambda (k) 13)))", None, "25"),
+  ("""(letrec ([fact
+                (lambda (n k)
+                  (cond
+                    [(fxzero? n) (k 1)]
+                    [else (fx* n (fact (fxsub1 n) k))]))])
+        (call/cc
+          (lambda (k)
+            (fact 5 k))))""", None, "1"),
+  ("""(call/cc
+       (lambda (k)
+         (letrec ([fact
+                   (lambda (n)
+                     (cond
+                       [(fxzero? n) (k 1)]
+                       [else (fx* n (fact (fxsub1 n)))]))])
+           (fact 5))))""", None, "1"),
+  ("""(let ([k #f])
+        (letrec ([fact
+                  (lambda (n)
+                    (cond
+                      [(fxzero? n)
+                       (call/cc
+                         (lambda (nk)
+                           (set! k nk)
+                           (k 1)))]
+                      [else (fx* n (fact (fxsub1 n)))]))])
+           (let ([v (fact 5)])
+             v)))""", None, "120"),
+  ("""(let ([k #f])
+        (letrec ([fact
+                  (lambda (n)
+                    (cond
+                      [(fxzero? n)
+                       (call/cc
+                         (lambda (nk)
+                           (set! k nk)
+                           (k 1)))]
+                      [else (fx* n (fact (fxsub1 n)))]))])
+           (let ([v (fact 5)])
+             (let ([nk k])
+               (set! k (lambda (x) (cons v x)))
+               (nk v)))))""", None, "(120 . 14400)"),
+  )),
+]
 
 from parser import parse
 
