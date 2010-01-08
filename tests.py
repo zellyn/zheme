@@ -566,74 +566,6 @@ TESTS = [
   ("(cons (let ([x #t]) (let ([y (cons x x)]) (cons x y))) (cons (let ([x #f]) (let ([y (cons x x)]) (cons y x))) ()))", L(S("cons"), L(S("let"), L(L(S("x"), True)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("x"), S("y")))), L(S("cons"), L(S("let"), L(L(S("x"), False)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("y"), S("x")))), L())), "((#t #t . #t) ((#f . #f) . #f))"),
   )),
 
-("procedures",
- (("(letrec () 12)", None, "12"),
-  ("(letrec () (let ([x 5]) (fx+ x x)))", None, "10"),
-  ("(letrec ([f (lambda () 5)]) 7)", None, "7"),
-  ("(letrec ([f (lambda () 5)]) (let ([x 12]) x))", None, "12"),
-  ("(letrec ([f (lambda () 5)]) (f))", None, "5"),
-  ("(letrec ([f (lambda () 5)]) (let ([x (f)]) x))", None, "5"),
-  ("(letrec ([f (lambda () 5)]) (fx+ (f) 6))", None, "11"),
-  ("(letrec ([f (lambda () 5)]) (fx- 20 (f)))", None, "15"),
-  ("(letrec ([f (lambda () 5)]) (fx+ (f) (f)))", None, "10"),
-  ("""(letrec ([f (lambda () (fx+ 5 7))]
-               [g (lambda () 13)])
-              (fx+ (f) (g)))""", None, "25"),
-  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f 13))", None, "25"),
-  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f (f 10)))", None, "34"),
-  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f (f (f 0))))", None, "36"),
-  ("""(letrec ([f (lambda (x y) (fx+ x y))]
-               [g (lambda (x) (fx+ x 12))])
-              (f 16 (f (g 0) (fx+ 1 (g 0)))))""", None, "41"),
-  ("""(letrec ([f (lambda (x) (g x x))]
-               [g (lambda (x y) (fx+ x y))])
-              (f 12))""", None, "24"),
-  ("""(letrec ([f (lambda (x)
-                   (if (fxzero? x)
-                       1
-                       (fx* x (f (fxsub1 x)))))])
-        (f 5))""", None, "120"),
-  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (o (fxsub1 x))))]
-               [o (lambda (x) (if (fxzero? x) #f (e (fxsub1 x))))])
-              (e 25))""", None, "#f"),
-  )),
-
-
-("deeply nested procedures",
- (("""(letrec ([sum (lambda (n ac)
-                   (if (fxzero? n)
-                        ac
-                        (app sum (fxsub1 n) (fx+ n ac))))])
-    (app sum 10000 0))""", None, "50005000"),
-  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (app o (fxsub1 x))))]
-            [o (lambda (x) (if (fxzero? x) #f (app e (fxsub1 x))))])
-     (app e 5000000))""", None, "#t"),
-  )),
-
-
-("begin/implicit-begin",
- (("(begin 12)", None, "12"),
-  ("(begin 13 122)", None, "122"),
-  ("(begin 123 2343 #t)", None, "#t"),
-  ("(let ([t (begin 12 (cons 1 2))]) (begin t t))", None, "(1 . 2)"),
-  ("(let ([t (begin 13 (cons 1 2))]) (cons 1 t) t)", None, "(1 . 2)"),
-  ("(let ([t (cons 1 2)]) (if (pair? t) (begin t) 12))", None, "(1 . 2)"),
-  )),
-
-("set-car! set-cdr!",
- (("(let ([x (cons 1 2)]) (begin (set-cdr! x ()) x))", None, "(1)"),
-  ("(let ([x (cons 1 2)]) (set-cdr! x ()) x)", None, "(1)"),
-  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! x y) x)", None, "(12 14 . 15)"),
-  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! y x) y)", None, "(14 12 . 13)"),
-  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! y x) x)", None, "(12 . 13)"),
-  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! x y) y)", None, "(14 . 15)"),
-  ("(let ([x (let ([x (cons 1 2)]) (set-car! x #t) (set-cdr! x #f) x)]) (cons x x) x)", None, "(#t . #f)"),
-  ("(let ([x (cons 1 2)]) (set-cdr! x x) (set-car! (cdr x) x) (cons (eq? x (car x)) (eq? x (cdr x))))", None, "(#t . #t)"),
-  ("(let ([x #f]) (if (pair? x) (set-car! x 12) #f)q x)", None, "#f"),
-# ;;;; ("(let ([x #f]) (if (pair? #f) (set-car! #f 12) #f) x)", None, "#f"),
-  )),
-
-
 ("vectors",
  (("(vector? (make-vector 0))", None, "#t"),
   ("(vector-length (make-vector 12))", None, "12"),
@@ -806,7 +738,72 @@ TESTS = [
   ("(let ([s (make-string 1)]) (string-set! s 0 #\\\\) s)", None, '"\\\\"'),
   )),
 
+("procedures",
+ (("(letrec () 12)", None, "12"),
+  ("(letrec () (let ([x 5]) (fx+ x x)))", None, "10"),
+  ("(letrec ([f (lambda () 5)]) 7)", None, "7"),
+  ("(letrec ([f (lambda () 5)]) (let ([x 12]) x))", None, "12"),
+  ("(letrec ([f (lambda () 5)]) (f))", None, "5"),
+  ("(letrec ([f (lambda () 5)]) (let ([x (f)]) x))", None, "5"),
+  ("(letrec ([f (lambda () 5)]) (fx+ (f) 6))", None, "11"),
+  ("(letrec ([f (lambda () 5)]) (fx- 20 (f)))", None, "15"),
+  ("(letrec ([f (lambda () 5)]) (fx+ (f) (f)))", None, "10"),
+  ("""(letrec ([f (lambda () (fx+ 5 7))]
+               [g (lambda () 13)])
+              (fx+ (f) (g)))""", None, "25"),
+  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f 13))", None, "25"),
+  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f (f 10)))", None, "34"),
+  ("(letrec ([f (lambda (x) (fx+ x 12))]) (f (f (f 0))))", None, "36"),
+  ("""(letrec ([f (lambda (x y) (fx+ x y))]
+               [g (lambda (x) (fx+ x 12))])
+              (f 16 (f (g 0) (fx+ 1 (g 0)))))""", None, "41"),
+  ("""(letrec ([f (lambda (x) (g x x))]
+               [g (lambda (x y) (fx+ x y))])
+              (f 12))""", None, "24"),
+  ("""(letrec ([f (lambda (x)
+                   (if (fxzero? x)
+                       1
+                       (fx* x (f (fxsub1 x)))))])
+        (f 5))""", None, "120"),
+  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (o (fxsub1 x))))]
+               [o (lambda (x) (if (fxzero? x) #f (e (fxsub1 x))))])
+              (e 25))""", None, "#f"),
+  )),
 
+
+("deeply nested procedures",
+ (("""(letrec ([sum (lambda (n ac)
+                   (if (fxzero? n)
+                        ac
+                        (app sum (fxsub1 n) (fx+ n ac))))])
+    (app sum 10000 0))""", None, "50005000"),
+  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (app o (fxsub1 x))))]
+            [o (lambda (x) (if (fxzero? x) #f (app e (fxsub1 x))))])
+     (app e 5000000))""", None, "#t"),
+  )),
+
+
+("begin/implicit-begin",
+ (("(begin 12)", None, "12"),
+  ("(begin 13 122)", None, "122"),
+  ("(begin 123 2343 #t)", None, "#t"),
+  ("(let ([t (begin 12 (cons 1 2))]) (begin t t))", None, "(1 . 2)"),
+  ("(let ([t (begin 13 (cons 1 2))]) (cons 1 t) t)", None, "(1 . 2)"),
+  ("(let ([t (cons 1 2)]) (if (pair? t) (begin t) 12))", None, "(1 . 2)"),
+  )),
+
+("set-car! set-cdr!",
+ (("(let ([x (cons 1 2)]) (begin (set-cdr! x ()) x))", None, "(1)"),
+  ("(let ([x (cons 1 2)]) (set-cdr! x ()) x)", None, "(1)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! x y) x)", None, "(12 14 . 15)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! y x) y)", None, "(14 12 . 13)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! y x) x)", None, "(12 . 13)"),
+  ("(let ([x (cons 12 13)] [y (cons 14 15)]) (set-cdr! x y) y)", None, "(14 . 15)"),
+  ("(let ([x (let ([x (cons 1 2)]) (set-car! x #t) (set-cdr! x #f) x)]) (cons x x) x)", None, "(#t . #f)"),
+  ("(let ([x (cons 1 2)]) (set-cdr! x x) (set-car! (cdr x) x) (cons (eq? x (car x)) (eq? x (cdr x))))", None, "(#t . #t)"),
+  ("(let ([x #f]) (if (pair? x) (set-car! x 12) #f)q x)", None, "#f"),
+# ;;;; ("(let ([x #f]) (if (pair? #f) (set-car! #f 12) #f) x)", None, "#f"),
+  )),
 
 
 # ;;; one possible implementation strategy for procedures is via closure
