@@ -2,6 +2,8 @@ import itertools
 import subprocess
 from parser import Symbol, List, Char
 
+WORD_SIZE = 4
+
 FULL_WORD = 0xffffffff
 
 EMPTY_LIST = 0b00101111 # 47 == 0x2f
@@ -24,7 +26,8 @@ PAIR_TAG     = 0b001
 PAIR_MASK    = 0b111
 CAR_OFFSET = 0
 CDR_OFFSET = 4
-PAIR_SIZE = 8
+
+PAIR_SIZE = 2 * WORD_SIZE
 CAR_TAG_OFFSET = CAR_OFFSET - PAIR_TAG # -1
 CDR_TAG_OFFSET = CDR_OFFSET - PAIR_TAG # 3
 
@@ -37,11 +40,8 @@ VECTOR_MASK  = 0b111
 STRING_TAG   = 0b110
 STRING_MASK  = 0b111
 
-# VECTOR_TAG  = 0b101
-# VECTOR_MASK = 0b111
-
-
-WORD_SIZE = 4
+VECTOR_SIZE_OFFSET = -VECTOR_TAG
+VECTOR_ZERO_OFFSET = VECTOR_SIZE_OFFSET + WORD_SIZE
 
 __known_ops = dict()
 
@@ -57,7 +57,7 @@ def emit_op(name, expr, si, env, f):
         raise Exception("Unknown op: %s" % name)
 
     if max_args==-1:
-        assert len(expr)-1==min_args, "Expected %d args: %s" % (min_args, expr)
+        assert len(expr)-1==min_args, "'%s' expects %d args: %s" % (name, min_args, expr)
     else:
         assert len(expr)-1>=min_args, "Expected at least %d args: %s" % (min_args, expr)
         if max_args is not None:
@@ -177,6 +177,17 @@ def emit_fx_gt(x, si, env, f):
 @op('fx>=', 2)
 def emit_fx_gte(x, si, env, f):
     emit_fx_lte(List(x[0],x[2],x[1]), si, env, f)
+
+@op('eq?', 2)
+def emit_eq(x, si, env, f):
+    emit_expr(x[2], si, env, f)
+    emit(f, "    movl %%eax, %d(%%esp)" % si)
+    emit_expr(x[1], si - WORD_SIZE, env, f)
+    emit(f, "    cmpl %d(%%esp), %%eax" % si)
+    emit(f, "    setz %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
 
 @op('$fxadd1', 1)
 def emit_fxadd1(x, si, env, f):
@@ -300,9 +311,9 @@ def emit_if(expr, si, env, f):
     emit_expr(expr[3], si, env, f)
     emit(f, "%s:" % over_label)
 
-@op('let', 2)
+@op('let', 2, None)
 def emit_let(expr, si, env, f):
-    bindings, inner = expr[1:]
+    bindings = expr[1]
     new_env = dict(env)
     for var, value in bindings:
         name = variable_name(var)
@@ -311,13 +322,24 @@ def emit_let(expr, si, env, f):
         emit(f, "    movl %%eax, %d(%%esp)" % si) # stack save
         new_env[name] = si
         si -= WORD_SIZE
-    emit_expr(inner, si, new_env, f)
+    for inner in expr[2:]:
+        emit_expr(inner, si, new_env, f)
 
 @op('pair?', 1)
 def emit_pair_p(x, si, env, f):
     emit_expr(x[1], si, env, f)
     emit(f, "    and $%d, %%al" % PAIR_MASK)
     emit(f, "    cmp $%d, %%al" % PAIR_TAG)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
+
+@op('vector?', 1)
+def emit_vector_p(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    and $%d, %%al" % VECTOR_MASK)
+    emit(f, "    cmp $%d, %%al" % VECTOR_TAG)
     emit(f, "    sete %al")
     emit(f, "    movzbl %al, %eax")
     emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
@@ -334,6 +356,53 @@ def emit_cons(x, si, env, f):
     emit(f, "    movl %ebp, %eax")
     emit(f, "    addl $%d, %%ebp" % PAIR_SIZE)
     emit(f, "    orl $%d, %%eax" % PAIR_TAG)
+
+@op('make-vector', 1)
+def emit_make_vector(x, si, env, f):
+    emit(f, "# make-vector")
+    # length in eax
+    emit_expr(x[1], si, env, f)
+    emit(f, "    movl %ebp, %edx") # save vector address
+    emit(f, "    movl %eax, (%ebp)") # save length
+    emit(f, "    addl $%d, %%ebp" % WORD_SIZE)
+    assert 1 << FIXNUM_SHIFT == WORD_SIZE, "Assume no shifts necessary for byte-length of vector"
+    emit(f, "    addl %eax, %ebp")
+    emit(f, "    addl $7, %ebp")
+    emit(f, "    andl $%d, %%ebp" % (FULL_WORD - 7))
+    emit(f, "    movl %edx, %eax")
+    emit(f, "    orl $%d, %%eax" % VECTOR_TAG)
+
+@op('vector-length', 1)
+def emit_vector_length(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    movl %d(%%eax), %%eax" % VECTOR_SIZE_OFFSET)
+
+@op('vector-set!', 3)
+def emit_vector_set(x, si, env, f):
+    emit(f, "# vector-set!")
+    # vector, position, value
+    emit_expr(x[1], si, env, f) # vector address
+    emit(f, "    addl $%d, %%eax" % VECTOR_ZERO_OFFSET)
+    emit(f, "    movl %%eax, %d(%%esp)" % si) # save vector address
+    emit_expr(x[2], si - WORD_SIZE, env, f) # position
+    assert 1 << FIXNUM_SHIFT == WORD_SIZE, "Assume no shifts necessary for indexing into vector"
+    emit(f, "    addl %%eax, %d(%%esp)" % si) # add to address
+    emit_expr(x[3], si - WORD_SIZE, env, f) # value
+    emit(f, "    movl %d(%%esp), %%edx" % si)
+    emit(f, "    movl %eax, (%edx)")
+
+@op('vector-ref', 2)
+def emit_vector_ref(x, si, env, f):
+    emit(f, "# vector-ref")
+    # vector, position
+    emit_expr(x[1], si, env, f) # vector address
+    emit(f, "    addl $%d, %%eax" % VECTOR_ZERO_OFFSET)
+    emit(f, "    movl %%eax, %d(%%esp)" % si) # save vector address
+    emit_expr(x[2], si - WORD_SIZE, env, f) # position
+    assert 1 << FIXNUM_SHIFT == WORD_SIZE, "Assume no shifts necessary for indexing into vector"
+    emit(f, "    addl %%eax, %d(%%esp)" % si) # add to address
+    emit(f, "    movl %d(%%esp), %%edx" % si)
+    emit(f, "    movl (%edx), %eax")
 
 @op('car', 1)
 def emit_car(x, si, env, f):

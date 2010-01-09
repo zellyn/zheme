@@ -19,6 +19,8 @@
 #define PAIR_TAG 0x01
 #define PAIR_MASK 0x07
 
+#define VECTOR_TAG 0x05
+#define VECTOR_MASK 0x07
 
 typedef struct {
     void* eax;    /* 0    scratch  */
@@ -85,6 +87,18 @@ void print_list(int val) {
     printf(")");
 }
 
+void print_vector(int val) {
+    printf("#(");
+    int* addr = (int*)(val - VECTOR_TAG);
+    int len = *addr >> FIXNUM_SHIFT;
+    int i;
+    for (i=1; i<=len; i++) {
+        if (i>1) printf(" ");
+        print_expr(addr[i]);
+    }
+    printf(")");
+}
+
 void print_expr(int val) {
     if ((val & FIXNUM_MASK) == FIXNUM_TAG) {
         printf("%d", val >> FIXNUM_SHIFT);
@@ -112,6 +126,9 @@ void print_expr(int val) {
     }
     else if (pair_p(val)) {
         print_list(val);
+    }
+    else if ((val & VECTOR_MASK) == VECTOR_TAG) {
+        print_vector(val);
     }
     else {
         printf("UNKNOWN!");

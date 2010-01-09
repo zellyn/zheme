@@ -566,6 +566,14 @@ TESTS = [
   ("(cons (let ([x #t]) (let ([y (cons x x)]) (cons x y))) (cons (let ([x #f]) (let ([y (cons x x)]) (cons y x))) ()))", L(S("cons"), L(S("let"), L(L(S("x"), True)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("x"), S("y")))), L(S("cons"), L(S("let"), L(L(S("x"), False)), L(S("let"), L(L(S("y"), L(S("cons"), S("x"), S("x")))), L(S("cons"), S("y"), S("x")))), L())), "((#t #t . #t) ((#f . #f) . #f))"),
   )),
 
+# added by zjh
+("eq?",
+ (("(eq? 3 3)", None, "#t"),
+  ("(eq? 1 0)", None, "#f"),
+  ("(let ([c (cons 1 2)]) (eq? c c))", None, "#t"),
+  ("(let ([c1 (cons 1 2)] [c2 (cons 1 2)]) (eq? c1 c2))", None, "#f"),
+  )),
+
 ("vectors",
  (("(vector? (make-vector 0))", None, "#t"),
   ("(vector-length (make-vector 12))", None, "12"),
@@ -589,6 +597,14 @@ TESTS = [
   ("""(let ([v (make-vector 1)] [y (cons 1 2)])
        (vector-set! v 0 y)
        (cons y (eq? y (vector-ref v 0))))""", None, "((1 . 2) . #t)"),
+  # added by zjh
+  ("""(let ([v0 (make-vector 2)])
+       (let ([v1 (make-vector 2)])
+         (vector-set! v0 0 100)
+         (vector-set! v0 1 200)
+         (vector-set! v1 0 300)
+         (vector-set! v1 1 400)
+         v0))""", None, "#(100 200)"),
   ("""(let ([v0 (make-vector 2)])
        (let ([v1 (make-vector 2)])
          (vector-set! v0 0 100)
@@ -596,6 +612,7 @@ TESTS = [
          (vector-set! v1 0 300)
          (vector-set! v1 1 400)
          (cons v0 v1)))""", None, "(#(100 200) . #(300 400))"),
+
   ("""(let ([v0 (make-vector 3)])
        (let ([v1 (make-vector 3)])
          (vector-set! v0 0 100)
@@ -624,21 +641,21 @@ TESTS = [
          (vector-set! v1 (fx- (vector-length v1) 1) 350)
          (cons v0 v1))))""", None, "(#(100 200 150) . #(300 400 350))"),
   ("""(let ([n 1])
-       (vector-set! (make-vector n) (fxsub1 n) (fx* n n))
+       (vector-set! (make-vector n) ($fxsub1 n) (fx* n n))
        n)""", None, "1"),
   ("""(let ([n 1])
        (let ([v (make-vector 1)])
-         (vector-set! v (fxsub1 n) n)
-         (vector-ref v (fxsub1 n))))""", None, "1"),
+         (vector-set! v ($fxsub1 n) n)
+         (vector-ref v ($fxsub1 n))))""", None, "1"),
   ("""(let ([v0 (make-vector 1)])
     (vector-set! v0 0 1)
     (let ([v1 (make-vector 1)])
         (vector-set! v1 0 13)
         (vector-set! (if (vector? v0) v0 v1)
-             (fxsub1 (vector-length (if (vector? v0) v0 v1)))
-             (fxadd1 (vector-ref
+             ($fxsub1 (vector-length (if (vector? v0) v0 v1)))
+             ($fxadd1 (vector-ref
                         (if (vector? v0) v0 v1)
-                        (fxsub1 (vector-length (if (vector? v0) v0 v1))))))
+                        ($fxsub1 (vector-length (if (vector? v0) v0 v1))))))
         (cons v0 v1)))""", None, "(#(2) . #(13))"),
   )),
 
@@ -715,24 +732,24 @@ TESTS = [
          (string-set! v1 (fx- (string-length v1) 1) #\\X)
          (cons v0 v1))))""", None,  "(\"abc\" . \"ZYX\")"),
   ("""(let ([n 1])
-       (string-set! (make-string n) (fxsub1 n) (fixnum->char 34))
+       (string-set! (make-string n) ($fxsub1 n) (fixnum->char 34))
        n)""", None, "1"),
   ("""(let ([n 1])
        (let ([v (make-string 1)])
-         (string-set! v (fxsub1 n) (fixnum->char n))
-         (char->fixnum (string-ref v (fxsub1 n)))))""", None, "1"),
+         (string-set! v ($fxsub1 n) (fixnum->char n))
+         (char->fixnum (string-ref v ($fxsub1 n)))))""", None, "1"),
   ("""(let ([v0 (make-string 1)])
      (string-set! v0 0 #\\a)
      (let ([v1 (make-string 1)])
          (string-set! v1 0 #\\A)
          (string-set! (if (string? v0) v0 v1)
-              (fxsub1 (string-length (if (string? v0) v0 v1)))
+              ($fxsub1 (string-length (if (string? v0) v0 v1)))
               (fixnum->char
-                (fxadd1
+                ($fxadd1
                    (char->fixnum
                      (string-ref
                         (if (string? v0) v0 v1)
-                        (fxsub1 (string-length (if (string? v0) v0 v1))))))))
+                        ($fxsub1 (string-length (if (string? v0) v0 v1))))))))
          (cons v0 v1)))""", None, "(\"b\" . \"A\")"),
   ("(let ([s (make-string 1)]) (string-set! s 0 #\\\") s)", None, '"\\""'),
   ("(let ([s (make-string 1)]) (string-set! s 0 #\\\\) s)", None, '"\\\\"'),
@@ -763,10 +780,10 @@ TESTS = [
   ("""(letrec ([f (lambda (x)
                    (if (fxzero? x)
                        1
-                       (fx* x (f (fxsub1 x)))))])
+                       (fx* x (f ($fxsub1 x)))))])
         (f 5))""", None, "120"),
-  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (o (fxsub1 x))))]
-               [o (lambda (x) (if (fxzero? x) #f (e (fxsub1 x))))])
+  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (o ($fxsub1 x))))]
+               [o (lambda (x) (if (fxzero? x) #f (e ($fxsub1 x))))])
               (e 25))""", None, "#f"),
   )),
 
@@ -775,10 +792,10 @@ TESTS = [
  (("""(letrec ([sum (lambda (n ac)
                    (if (fxzero? n)
                         ac
-                        (app sum (fxsub1 n) (fx+ n ac))))])
+                        (app sum ($fxsub1 n) (fx+ n ac))))])
     (app sum 10000 0))""", None, "50005000"),
-  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (app o (fxsub1 x))))]
-            [o (lambda (x) (if (fxzero? x) #f (app e (fxsub1 x))))])
+  ("""(letrec ([e (lambda (x) (if (fxzero? x) #t (app o ($fxsub1 x))))]
+            [o (lambda (x) (if (fxzero? x) #f (app e ($fxsub1 x))))])
      (app e 5000000))""", None, "#t"),
   )),
 
@@ -920,12 +937,12 @@ TESTS = [
   ("""(let ([f (lambda (f n m)
               (if (fxzero? n)
                   m
-                  (f f (fxsub1 n) (fx* n m))))])
+                  (f f ($fxsub1 n) (fx* n m))))])
     (f f 5 1))""", None, "120"),
   ("""(let ([f (lambda (f n)
               (if (fxzero? n)
                   1
-                  (fx* n (f f (fxsub1 n)))))])
+                  (fx* n (f f ($fxsub1 n)))))])
     (f f 5))""", None, "120"),
   )),
 
@@ -939,13 +956,13 @@ TESTS = [
   ("""(let ([f (lambda (f n m)
               (if (fxzero? n)
                   m
-                  (f (fxsub1 n) (fx* n m))))])
+                  (f ($fxsub1 n) (fx* n m))))])
     (let ([g (lambda (g n m) (f (lambda (n m) (g g n m)) n m))])
       (g g 5 1)))""", None, "120"),
   ("""(let ([f (lambda (f n)
               (if (fxzero? n)
                   1
-                  (fx* n (f (fxsub1 n)))))])
+                  (fx* n (f ($fxsub1 n)))))])
     (let ([g (lambda (g n) (f (lambda (n) (g g n)) n))])
       (g g 5)))""", None, "120"),
   )),
@@ -955,7 +972,7 @@ TESTS = [
      (set! x 13)
      x)""", None, "13"),
   ("""(let ([x 12])
-     (set! x (fxadd1 x))
+     (set! x ($fxadd1 x))
      x)""", None, "13"),
   ("""(let ([x 12])
      (let ([x #f]) (set! x 14))
@@ -968,12 +985,12 @@ TESTS = [
        (set! f 10)
        (g)))""", None, "10"),
   ("""(let ([f (lambda (x)
-              (set! x (fxadd1 x))
+              (set! x ($fxadd1 x))
               x)])
      (f 12))""", None, "13"),
   ("""(let ([x 10])
      (let ([f (lambda (x)
-                (set! x (fxadd1 x))
+                (set! x ($fxadd1 x))
                 x)])
        (cons x (f x))))""", None, "(10 . 11)"),
   ("""(let ([t #f])
@@ -994,7 +1011,7 @@ TESTS = [
           (lambda ()
             (let ([counter -1])
               (lambda ()
-                (set! counter (fxadd1 counter))
+                (set! counter ($fxadd1 counter))
                 counter)))])
      (let ([c0 (make-counter)]
            [c1 (make-counter)])
@@ -1004,14 +1021,14 @@ TESTS = [
      (set! fact (lambda (n)
                   (if (fxzero? n)
                       1
-                      (fx* n (fact (fxsub1 n))))))
+                      (fx* n (fact ($fxsub1 n))))))
      (fact 5))""", None, "120"),
   ("""(let ([fact #f])
      ((begin
          (set! fact (lambda (n)
                       (if (fxzero? n)
                           1
-                          (fx* n (fact (fxsub1 n))))))
+                          (fx* n (fact ($fxsub1 n))))))
          fact)
       5))""", None, "120"),
   )),
@@ -1037,7 +1054,7 @@ TESTS = [
                (lambda (n)
                  (if (fxzero? n)
                      1
-                     (fx* n (fact (fxsub1 n)))))])
+                     (fx* n (fact ($fxsub1 n)))))])
       (fact 5))""", None, "120"),
   ("(letrec ([f 12] [g (lambda () f)]) (g))", None, "12"),
   ("(letrec ([f 12] [g (lambda (n) (set! f n))]) (g 130) f)", None, "130"),
@@ -1051,13 +1068,13 @@ TESTS = [
   ("""(letrec ([f (lambda (f n)
                     (if (fxzero? n)
                         1
-                        (fx* n (f f (fxsub1 n)))))])
+                        (fx* n (f f ($fxsub1 n)))))])
         (f f 5))""", None, "120"),
   ("""(let ([f (lambda (f)
                 (lambda (n)
                    (if (fxzero? n)
                        1
-                       (fx* n (f (fxsub1 n))))))])
+                       (fx* n (f ($fxsub1 n))))))])
        (letrec ([fix
                  (lambda (f)
                    (f (lambda (n) ((fix f) n))))])
@@ -1072,7 +1089,7 @@ TESTS = [
                (lambda (n)
                  (if (fxzero? n)
                      1
-                     (fx* n (fact (fxsub1 n)))))])
+                     (fx* n (fact ($fxsub1 n)))))])
       (fact 5))""", None, "120"),
   ("(letrec* ([f 12] [g (lambda () f)]) (g))", None, "12"),
   ("(letrec* ([f 12] [g (lambda (n) (set! f n))]) (g 130) f)", None, "130"),
@@ -1086,13 +1103,13 @@ TESTS = [
   ("""(letrec* ([f (lambda (f n)
                      (if (fxzero? n)
                          1
-                         (fx* n (f f (fxsub1 n)))))])
+                         (fx* n (f f ($fxsub1 n)))))])
         (f f 5))""", None, "120"),
   ("""(let ([f (lambda (f)
                 (lambda (n)
                    (if (fxzero? n)
                        1
-                       (fx* n (f (fxsub1 n))))))])
+                       (fx* n (f ($fxsub1 n))))))])
        (letrec* ([fix
                   (lambda (f)
                     (f (lambda (n) ((fix f) n))))])
@@ -1116,8 +1133,8 @@ TESTS = [
   ("(let ([if 12]) (and if 17))", None, "17"),
   ("(let ([let 8]) (or let 18))", None, "8"),
   ("(let ([let 8]) (and let 18))", None, "18"),
-  ("(let ([t 1]) (and (begin (set! t (fxadd1 t)) t) t))", None, "2"),
-  ("(let ([t 1]) (or (begin (set! t (fxadd1 t)) t) t))", None, "2"),
+  ("(let ([t 1]) (and (begin (set! t ($fxadd1 t)) t) t))", None, "2"),
+  ("(let ([t 1]) (or (begin (set! t ($fxadd1 t)) t) t))", None, "2"),
   )),
 
 
@@ -1309,7 +1326,7 @@ TESTS = [
 ("string-set! errors",
  (
 # first with a fixed index
-  ("(let ((t 1)) (and (begin (set! t (fxadd1 t)) t) t))", None, "2"),
+  ("(let ((t 1)) (and (begin (set! t ($fxadd1 t)) t) t))", None, "2"),
   ("(let ((f (if (boolean? (lambda () 12)) (lambda () 13) (lambda () 14)))) (f))", None, "14"),
 
   ("(let ([f 12]) (let ([g (lambda () f)]) (g)))", None, "12"),
@@ -1587,14 +1604,14 @@ TESTS = [
                   (fill-string! i (fx- j (string-length t)))
                   (begin
                     (string-set! s i (string-ref t j))
-                    (fill-string! (fxadd1 i) (fx+ j 17)))))))
+                    (fill-string! ($fxadd1 i) (fx+ j 17)))))))
         (define write-string!
           (lambda (i p)
             (cond
               [(fx= i (string-length s)) (close-output-port p)]
               [else
                (write-char (string-ref s i) p)
-               (write-string! (fxadd1 i) p)])))
+               (write-string! ($fxadd1 i) p)])))
         (define verify
           (lambda (i p)
             (let ([x (read-char p)])
@@ -1604,7 +1621,7 @@ TESTS = [
                  (fx= i (string-length s))]
                 [(fx= i (string-length s)) (error 'verify "file too short")]
                 [(char= (string-ref s i) x)
-                 (verify (fxadd1 i) p)]
+                 (verify ($fxadd1 i) p)]
                 [else (error 'verify "mismatch")]))))
         (fill-string! 0 0)
         (write-string! 0 (open-output-file "stst.tmp" 'replace))
@@ -1779,7 +1796,7 @@ TESTS = [
         (lambda (i)
           (when (fx<= i 1000)
             (let ([x (make-list 1000)])
-              (f (fxadd1 i)))))])
+              (f ($fxadd1 i)))))])
        (f 0)
        100)""", None, "100"),
   ("""(letrec ([f
@@ -1787,7 +1804,7 @@ TESTS = [
           (when (fx<= i 100000)
             (let ([x (list 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
                            0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)])
-              (f (fxadd1 i)))))])
+              (f ($fxadd1 i)))))])
        (f 0)
        100)""", None, "100"),
   )),
@@ -1802,7 +1819,7 @@ TESTS = [
                 (lambda (n k)
                   (cond
                     [(fxzero? n) (k 1)]
-                    [else (fx* n (fact (fxsub1 n) k))]))])
+                    [else (fx* n (fact ($fxsub1 n) k))]))])
         (call/cc
           (lambda (k)
             (fact 5 k))))""", None, "1"),
@@ -1812,7 +1829,7 @@ TESTS = [
                    (lambda (n)
                      (cond
                        [(fxzero? n) (k 1)]
-                       [else (fx* n (fact (fxsub1 n)))]))])
+                       [else (fx* n (fact ($fxsub1 n)))]))])
            (fact 5))))""", None, "1"),
   ("""(let ([k #f])
         (letrec ([fact
@@ -1823,7 +1840,7 @@ TESTS = [
                          (lambda (nk)
                            (set! k nk)
                            (k 1)))]
-                      [else (fx* n (fact (fxsub1 n)))]))])
+                      [else (fx* n (fact ($fxsub1 n)))]))])
            (let ([v (fact 5)])
              v)))""", None, "120"),
   ("""(let ([k #f])
@@ -1835,7 +1852,7 @@ TESTS = [
                          (lambda (nk)
                            (set! k nk)
                            (k 1)))]
-                      [else (fx* n (fact (fxsub1 n)))]))])
+                      [else (fx* n (fact ($fxsub1 n)))]))])
            (let ([v (fact 5)])
              (let ([nk k])
                (set! k (lambda (x) (cons v x)))
