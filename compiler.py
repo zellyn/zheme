@@ -42,6 +42,8 @@ STRING_MASK  = 0b111
 
 VECTOR_SIZE_OFFSET = -VECTOR_TAG
 VECTOR_ZERO_OFFSET = VECTOR_SIZE_OFFSET + WORD_SIZE
+STRING_SIZE_OFFSET = -STRING_TAG
+STRING_ZERO_OFFSET = STRING_SIZE_OFFSET + WORD_SIZE
 
 __known_ops = dict()
 
@@ -345,6 +347,16 @@ def emit_vector_p(x, si, env, f):
     emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
     emit(f, "    or $%d, %%al" % BOOL_TAG)
 
+@op('string?', 1)
+def emit_string_p(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    and $%d, %%al" % STRING_MASK)
+    emit(f, "    cmp $%d, %%al" % STRING_TAG)
+    emit(f, "    sete %al")
+    emit(f, "    movzbl %al, %eax")
+    emit(f, "    shl $%d, %%al" % BOOL_SHIFT)
+    emit(f, "    or $%d, %%al" % BOOL_TAG)
+
 @op('cons', 2)
 def emit_cons(x, si, env, f):
     emit_expr(x[2], si, env, f)
@@ -403,6 +415,57 @@ def emit_vector_ref(x, si, env, f):
     emit(f, "    addl %%eax, %d(%%esp)" % si) # add to address
     emit(f, "    movl %d(%%esp), %%edx" % si)
     emit(f, "    movl (%edx), %eax")
+
+@op('make-string', 1)
+def emit_make_string(x, si, env, f):
+    emit(f, "# make-string")
+    # length in eax
+    emit_expr(x[1], si, env, f)
+    emit(f, "    movl %ebp, %edx") # save string address
+    emit(f, "    movl %eax, (%ebp)") # save length
+    emit(f, "    addl $%d, %%ebp" % WORD_SIZE)
+    emit(f, "    shrl $%d, %%eax" % FIXNUM_SHIFT) # shift to actual int
+    emit(f, "    addl %eax, %ebp")
+    emit(f, "    addl $7, %ebp")
+    emit(f, "    andl $%d, %%ebp" % (FULL_WORD - 7))
+    emit(f, "    movl %edx, %eax")
+    emit(f, "    orl $%d, %%eax" % STRING_TAG)
+
+@op('string-length', 1)
+def emit_string_length(x, si, env, f):
+    emit_expr(x[1], si, env, f)
+    emit(f, "    movl %d(%%eax), %%eax" % STRING_SIZE_OFFSET)
+
+@op('string-set!', 3)
+def emit_string_set(x, si, env, f):
+    emit(f, "# string-set!")
+    # string, position, value
+    emit_expr(x[1], si, env, f) # string address
+    emit(f, "    addl $%d, %%eax" % STRING_ZERO_OFFSET)
+    emit(f, "    movl %%eax, %d(%%esp)" % si) # save string address
+    emit_expr(x[2], si - WORD_SIZE, env, f) # position
+    emit(f, "    shrl $%d, %%eax" % FIXNUM_SHIFT) # length as actual int
+    emit(f, "    addl %%eax, %d(%%esp)" % si) # add to address
+    emit_expr(x[3], si - WORD_SIZE, env, f) # value
+    emit(f, "    shrl $%d, %%eax" % CHAR_SHIFT) # value as actual char
+    emit(f, "    movl %d(%%esp), %%edx" % si)
+    emit(f, "    movb %al, (%edx)")
+
+@op('string-ref', 2)
+def emit_string_ref(x, si, env, f):
+    emit(f, "# string-ref")
+    # string, position
+    emit_expr(x[1], si, env, f) # string address
+    emit(f, "    addl $%d, %%eax" % STRING_ZERO_OFFSET)
+    emit(f, "    movl %%eax, %d(%%esp)" % si) # save string address
+    emit_expr(x[2], si - WORD_SIZE, env, f) # position
+    emit(f, "    shrl $%d, %%eax" % FIXNUM_SHIFT) # length as actual int
+    emit(f, "    addl %%eax, %d(%%esp)" % si) # add to address
+    emit(f, "    movl %d(%%esp), %%edx" % si)
+    emit(f, "    movl $0, %eax")
+    emit(f, "    movb (%edx), %al")
+    emit(f, "    shll $%d, %%eax" % CHAR_SHIFT)
+    emit(f, "    orl $%d, %%eax" % CHAR_TAG)
 
 @op('car', 1)
 def emit_car(x, si, env, f):

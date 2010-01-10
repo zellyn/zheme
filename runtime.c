@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
+#define WORD_SIZE 4
+
 #define EMPTY_LIST 0x2f
 
 #define FIXNUM_MASK 3
@@ -21,6 +23,9 @@
 
 #define VECTOR_TAG 0x05
 #define VECTOR_MASK 0x07
+
+#define STRING_TAG 0x06
+#define STRING_MASK 0x07
 
 typedef struct {
     void* eax;    /* 0    scratch  */
@@ -99,6 +104,24 @@ void print_vector(int val) {
     printf(")");
 }
 
+void print_string(int val) {
+    printf("\"");
+    int* addr = (int*)(val - STRING_TAG);
+    char* data = (char*)(val - STRING_TAG + WORD_SIZE);
+    int len = *addr >> FIXNUM_SHIFT;
+    int i;
+    for (i=0; i<len; i++) {
+        char c = data[i];
+        switch (c) {
+        case '\\': printf("\\\\"); break;
+        case '"': printf("\\\""); break;
+        default:
+            printf("%c", c);
+        }
+    }
+    printf("\"");
+}
+
 void print_expr(int val) {
     if ((val & FIXNUM_MASK) == FIXNUM_TAG) {
         printf("%d", val >> FIXNUM_SHIFT);
@@ -129,6 +152,9 @@ void print_expr(int val) {
     }
     else if ((val & VECTOR_MASK) == VECTOR_TAG) {
         print_vector(val);
+    }
+    else if ((val & STRING_MASK) == STRING_TAG) {
+        print_string(val);
     }
     else {
         printf("UNKNOWN!");
